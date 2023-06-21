@@ -235,14 +235,19 @@
       },
       onMouseDownAlpha(event) {
         event.preventDefault()
+        const alphaRect = this.$refs.pickerAlpha.getBoundingClientRect()
+        this.clientXAlpha = event.clientX - alphaRect.left - 8
+        this.updateAlpha()
+        document.addEventListener('mousemove', this.onMouseMoveAlpha)
+        document.addEventListener('mouseup', this.onMouseUpAlpha)
       },
       onMouseMoveAlpha(event) {
-        event.preventDefault()
         const alphaRect = this.$refs.pickerAlpha.getBoundingClientRect()
-        this.clientXGradient = event.clientX - alphaRect.left - 8
-        this.updateHue()
-        document.addEventListener('mousemove', this.onMouseMoveGradient)
-        document.addEventListener('mouseup', this.onMouseUpGradient)
+        if (alphaRect.left < event.clientX && event.clientX < alphaRect.right)
+          this.clientXAlpha = event.clientX - alphaRect.left - 6
+        if (event.clientX > alphaRect.right)
+          this.clientXAlpha = alphaRect.width - 6
+        if (event.clientX < alphaRect.left) this.clientXAlpha = -6
       },
       onMouseUpAlpha(event) {
         document.removeEventListener('mousemove', this.onMouseMoveAlpha)
@@ -336,20 +341,22 @@
           </div>
         </div>
         <div class="color-picker-slider-alpha">
-          <div class="color-picker-palette">
+          <div class="color-picker-palette" @mousedown="onMouseDownAlpha">
             <div
               :style="{
                 position: 'absolute',
-                left: '110px',
+                left: `${this.clientXAlpha}px`,
                 top: '-2px',
                 zIndex: 1,
               }"
             >
-              <div class="color-picker-handler"></div>
+              <div
+                class="color-picker-handler"
+                :style="{ background: backgroundBlock }"
+              ></div>
             </div>
             <div
               class="color-picker-opacity"
-              @mousedown="onMouseDownAlpha"
               ref="pickerAlpha"
               :style="{
                 background: `linear-gradient(to right, rgba(255, 0, 4, 0), ${backgroundPicker}`,

@@ -31,6 +31,7 @@
     watch: {
       backgroundColor(value) {
         const selection = window.getSelection()
+        if (selection.rangeCount === 0) return
         const color = value
         const range = selection.getRangeAt(0)
 
