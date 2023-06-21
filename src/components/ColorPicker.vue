@@ -1,14 +1,19 @@
 <script>
   export default {
+    emits: ['change', 'blur'],
     props: {
       value: {
         type: String,
         default: '#1677ff',
       },
+      output: {
+        type: String,
+        default: 'hex',
+      },
     },
     data() {
       return {
-        selector: 'hsb',
+        selector: 'hex',
         clientX: 0,
         clientY: 0,
         hsb: {
@@ -21,9 +26,10 @@
           green: 0,
           blue: 0,
         },
-        hex: '',
-        alpha: 1,
+        hex: '#000000',
+        alpha: 100,
         clientXGradient: 0,
+        clientXAlpha: 0,
       }
     },
     mounted() {
@@ -31,6 +37,13 @@
       const selectRect = this.$refs.pickerSelect.getBoundingClientRect()
       this.clientX = -8
       this.clientY = selectRect.height - 8
+      if (this.value.startsWith('#')) {
+        this.hex = this.value
+        this.handleHex(this.value)
+      }
+      if (this.value.startsWith('rgb')) {
+        this.rgb = {}
+      }
     },
     computed: {
       topSelect() {
@@ -43,8 +56,13 @@
         const [red, green, blue] = this.hsbToRgb(this.hsb.hue, 100, 100)
         return `rgb(${red},${green},${blue})`
       },
-      backgroundBlock() {
+      backgroundPicker() {
         return `rgb(${this.rgb.red},${this.rgb.green},${this.rgb.blue})`
+      },
+      backgroundBlock() {
+        return `rgba(${this.rgb.red},${this.rgb.green},${this.rgb.blue}, ${
+          this.alpha / 100
+        })`
       },
     },
     methods: {
@@ -67,6 +85,9 @@
 
         this.updateColorFromHsb()
       },
+      updateAlpha() {
+        const alphaRect = this.$refs.pickerAlpha.getBoundingClientRect()
+      },
       rgbToHex(r, g, b) {
         return ((r << 16) + (g << 8) + b).toString(16).padStart(6, '0')
       },
@@ -82,7 +103,7 @@
           h >>> (alpha ? 24 : 16),
           (h & (alpha ? 0x00ff0000 : 0x00ff00)) >>> (alpha ? 16 : 8),
           (h & (alpha ? 0x0000ff00 : 0x0000ff)) >>> (alpha ? 8 : 0),
-          alpha ? h & 0x000000ff : '',
+          alpha ? h & 0x000000ff : 255,
         ]
       },
       hsbToRgb(h, s, b) {
@@ -142,18 +163,26 @@
         this.hex = `#${this.rgbToHex(red, green, blue)}`
       },
       handleHexInput(event) {
-        const value = event.target.value
+        this.handleHex(event.target.value)
+      },
+      handleHex(value) {
+        const replaceValue = value.replace('#', '')
         const getValue =
-          value.length == 7
-            ? value.slice(0, 6)
-            : value.length >= 8
-            ? value.slice(0, 8)
-            : value
+          replaceValue.length == 7
+            ? replaceValue.slice(0, 6)
+            : replaceValue.length >= 8
+            ? replaceValue.slice(0, 8)
+            : replaceValue
         const [red, green, blue, alpha] = this.hexToRgb(getValue)
         this.rgb = { red, green, blue }
+
         this.alpha = Math.round((alpha / 255) * 100)
+        ;[this.hsb.hue, this.hsb.saturation, this.hsb.brightness] =
+          this.rgbToHsb(red, green, blue)
       },
+      handleAlphaInput(event) {},
       onMouseDown(event) {
+        event.preventDefault()
         const selectRect = this.$refs.pickerSelect.getBoundingClientRect()
         this.clientX = event.clientX - selectRect.left - 8
         this.clientY = event.clientY - selectRect.top - 8
@@ -180,14 +209,15 @@
         document.removeEventListener('mouseup', this.onMouseUp)
       },
 
-      onMouseDownProgressGradient(event) {
+      onMouseDownGradient(event) {
+        event.preventDefault()
         const gradientRect = this.$refs.pickerGradient.getBoundingClientRect()
         this.clientXGradient = event.clientX - gradientRect.left - 8
         this.updateHue()
-        document.addEventListener('mousemove', this.onMouseMoveProgressGradient)
-        document.addEventListener('mouseup', this.onMouseUpProgressGradient)
+        document.addEventListener('mousemove', this.onMouseMoveGradient)
+        document.addEventListener('mouseup', this.onMouseUpGradient)
       },
-      onMouseMoveProgressGradient(event) {
+      onMouseMoveGradient(event) {
         const gradientRect = this.$refs.pickerGradient.getBoundingClientRect()
         if (
           gradientRect.left < event.clientX &&
@@ -199,22 +229,36 @@
         if (event.clientX < gradientRect.left) this.clientXGradient = -6
         this.updateHue()
       },
-      onMouseUpProgressGradient(event) {
-        document.removeEventListener(
-          'mousemove',
-          this.onMouseMoveProgressGradient
-        )
-        document.removeEventListener('mouseup', this.onMouseUpProgressGradient)
+      onMouseUpGradient(event) {
+        document.removeEventListener('mousemove', this.onMouseMoveGradient)
+        document.removeEventListener('mouseup', this.onMouseUpGradient)
+      },
+      onMouseDownAlpha(event) {
+        event.preventDefault()
+      },
+      onMouseMoveAlpha(event) {
+        event.preventDefault()
+        const alphaRect = this.$refs.pickerAlpha.getBoundingClientRect()
+        this.clientXGradient = event.clientX - alphaRect.left - 8
+        this.updateHue()
+        document.addEventListener('mousemove', this.onMouseMoveGradient)
+        document.addEventListener('mouseup', this.onMouseUpGradient)
+      },
+      onMouseUpAlpha(event) {
+        document.removeEventListener('mousemove', this.onMouseMoveAlpha)
+        document.removeEventListener('mouseup', this.onMouseUpAlpha)
+      },
+      onBlur(event) {
+        this.$emit('blur', event)
       },
     },
     beforeUnmount() {
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp)
-      document.removeEventListener(
-        'mousemove',
-        this.onMouseMoveProgressGradient
-      )
-      document.removeEventListener('mouseup', this.onMouseUpProgressGradient)
+      document.removeEventListener('mousemove', this.onMouseMove)
+      document.removeEventListener('mouseup', this.onMouseUp)
+      document.removeEventListener('mousemove', this.onMouseMoveGradient)
+      document.removeEventListener('mouseup', this.onMouseUpGradient)
+      document.removeEventListener('mousemove', this.onMouseMoveAlpha)
+      document.removeEventListener('mouseup', this.onMouseUpAlpha)
     },
     watch: {
       hsb: {
@@ -225,6 +269,8 @@
           this.clientX = selectRect.width * (value.saturation / 100) - 8
           this.clientY =
             selectRect.height * ((100 - value.brightness) / 100) - 8
+
+          this.$emit('change', this.output == 'hex' && this.hex)
         },
         deep: true,
       },
@@ -233,7 +279,7 @@
 </script>
 
 <template>
-  <div class="color-picker-panel">
+  <div class="color-picker-panel" tabindex="-1" @blur="onBlur">
     <div class="color-picker-select">
       <div
         class="color-picker-palette"
@@ -250,7 +296,7 @@
         >
           <div
             class="color-picker-handler"
-            :style="{ background: backgroundBlock }"
+            :style="{ background: backgroundPicker }"
           />
         </div>
         <div
@@ -270,7 +316,7 @@
         <div class="color-picker-slider-hue">
           <div
             class="color-picker-palette"
-            @mousedown="onMouseDownProgressGradient"
+            @mousedown="onMouseDownGradient"
             ref="pickerGradient"
           >
             <div
@@ -301,7 +347,14 @@
             >
               <div class="color-picker-handler"></div>
             </div>
-            <div class="color-picker-opacity"></div>
+            <div
+              class="color-picker-opacity"
+              @mousedown="onMouseDownAlpha"
+              ref="pickerAlpha"
+              :style="{
+                background: `linear-gradient(to right, rgba(255, 0, 4, 0), ${backgroundPicker}`,
+              }"
+            ></div>
           </div>
         </div>
       </div>
@@ -318,21 +371,21 @@
         <div
           class="color-picker-selector-item"
           :class="{ 'color-picker-selector-item-actived': selector === 'hex' }"
-          @click="selector = 'hex'"
+          @mousedown.prevent="selector = 'hex'"
         >
           HEX
         </div>
         <div
           class="color-picker-selector-item"
           :class="{ 'color-picker-selector-item-actived': selector === 'rgb' }"
-          @click="selector = 'rgb'"
+          @mousedown.prevent="selector = 'rgb'"
         >
           RGB
         </div>
         <div
           class="color-picker-selector-item"
           :class="{ 'color-picker-selector-item-actived': selector === 'hsb' }"
-          @click="selector = 'hsb'"
+          @mousedown.prevent="selector = 'hsb'"
         >
           HSB
         </div>
@@ -401,7 +454,14 @@
           </div>
         </div>
         <div class="color-picker-input-alpha">
-          <input type="number" value="100" />
+          <input
+            type="number"
+            name="alpha"
+            min="0"
+            max="100"
+            v-model="alpha"
+            @input="handleAlphaInput"
+          />
         </div>
       </div>
     </div>
@@ -435,7 +495,6 @@
     display: flex;
     flex-direction: column;
     width: 240px;
-    height: 236px;
   }
 
   .color-picker-select {
