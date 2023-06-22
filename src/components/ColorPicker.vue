@@ -1,4 +1,5 @@
 <script>
+  import { debounce } from 'lodash'
   export default {
     emits: ['change', 'blur'],
     props: {
@@ -27,16 +28,16 @@
           blue: 0,
         },
         hex: '#000000',
-        alpha: 100,
+        alpha: 0,
         clientXGradient: 0,
         clientXAlpha: 0,
+        selection: null,
       }
     },
     mounted() {
-      // const gradientRect = this.$refs.pickerGradient.getBoundingClientRect()
-      const selectRect = this.$refs.pickerSelect.getBoundingClientRect()
-      this.clientX = -8
-      this.clientY = selectRect.height - 8
+      // const selectRect = this.$refs.pickerSelect.getBoundingClientRect()
+      // this.clientX = -8
+      // this.clientY = selectRect.height - 8
       if (this.value.startsWith('#')) {
         this.hex = this.value
         this.handleHex(this.value)
@@ -82,11 +83,20 @@
           ((this.clientXGradient + 6) / gradientRect.width) * 360
         )
         this.hsb.hue = hue
-
         this.updateColorFromHsb()
       },
       updateAlpha() {
         const alphaRect = this.$refs.pickerAlpha.getBoundingClientRect()
+        const alpha = Math.round(
+          ((this.clientXAlpha + 6) / alphaRect.width) * 100
+        )
+        this.alpha = alpha
+
+        const hexOpacity = Math.round((alpha / 100) * 255)
+          .toString(16)
+          .padStart(2, '0')
+
+        this.hex = `#${this.hex.replace('#', '').slice(0, 6)}${hexOpacity}`
       },
       rgbToHex(r, g, b) {
         return ((r << 16) + (g << 8) + b).toString(16).padStart(6, '0')
@@ -162,7 +172,10 @@
           this.rgbToHsb(red, green, blue)
         this.hex = `#${this.rgbToHex(red, green, blue)}`
       },
-      handleHexInput(event) {
+      handleHexInput: debounce(function (event) {
+        this.handleHex(event.target.value), 500
+      }, 600),
+      handleHexChange(event) {
         this.handleHex(event.target.value)
       },
       handleHex(value) {
@@ -208,7 +221,6 @@
         document.removeEventListener('mousemove', this.onMouseMove)
         document.removeEventListener('mouseup', this.onMouseUp)
       },
-
       onMouseDownGradient(event) {
         event.preventDefault()
         const gradientRect = this.$refs.pickerGradient.getBoundingClientRect()
@@ -248,6 +260,7 @@
         if (event.clientX > alphaRect.right)
           this.clientXAlpha = alphaRect.width - 6
         if (event.clientX < alphaRect.left) this.clientXAlpha = -6
+        this.updateAlpha()
       },
       onMouseUpAlpha(event) {
         document.removeEventListener('mousemove', this.onMouseMoveAlpha)
@@ -255,6 +268,23 @@
       },
       onBlur(event) {
         this.$emit('blur', event)
+      },
+      onMouseDownInput(event) {
+        this.savedSelection()
+      },
+      onMouseUpInput(event) {
+        event.preventDefault()
+      },
+      savedSelection() {
+        const sel = window.getSelection()
+        if (sel.rangeCount !== 0) {
+          this.selection = window.getSelection().getRangeAt(0)
+        }
+      },
+      restoreSelection() {
+        const sel = window.getSelection()
+        sel.removeAllRanges()
+        sel.addRange(this.selection)
       },
     },
     beforeUnmount() {
@@ -275,16 +305,20 @@
           this.clientY =
             selectRect.height * ((100 - value.brightness) / 100) - 8
 
-          this.$emit('change', this.output == 'hex' && this.hex)
+          this.$emit('change', this.output == 'hex' && this.hex, this.selection)
         },
         deep: true,
+      },
+      alpha(value) {
+        const alphaRect = this.$refs.pickerAlpha.getBoundingClientRect()
+        this.clientXAlpha = alphaRect.width * (value / 100) - 6
       },
     },
   }
 </script>
 
 <template>
-  <div class="color-picker-panel" tabindex="-1" @blur="onBlur">
+  <div class="color-picker-panel" tabindex="-1">
     <div class="color-picker-select">
       <div
         class="color-picker-palette"
@@ -404,7 +438,12 @@
               type="text"
               v-model="hex"
               name="hex"
+              maxlength="9"
               @input="handleHexInput"
+              @blur="restoreSelection"
+              @mousedown="onMouseDownInput"
+              @mouseup="onMouseUpInput"
+              @change="handleHexChange"
             />
           </div>
           <div class="color-picker-input-rgb" v-if="selector === 'rgb'">
@@ -412,6 +451,7 @@
               type="number"
               min="0"
               max="255"
+              maxlength="3"
               name="red"
               v-model="rgb.red"
               @input="handleRgbInput"
@@ -420,6 +460,7 @@
               type="number"
               min="0"
               max="255"
+              maxlength="3"
               name="green"
               v-model="rgb.green"
               @input="handleRgbInput"
@@ -439,6 +480,7 @@
               type="number"
               min="0"
               max="360"
+              maxlength="3"
               v-model="hsb.hue"
               @input="handleHsbInput"
             />
@@ -447,6 +489,7 @@
               type="number"
               min="0"
               max="100"
+              maxlength="3"
               v-model="hsb.saturation"
               @input="handleHsbInput"
             />
@@ -455,6 +498,7 @@
               type="number"
               min="0"
               max="100"
+              maxlength="3"
               v-model="hsb.brightness"
               @input="handleHsbInput"
             />
@@ -466,6 +510,7 @@
             name="alpha"
             min="0"
             max="100"
+            maxlength="3"
             v-model="alpha"
             @input="handleAlphaInput"
           />

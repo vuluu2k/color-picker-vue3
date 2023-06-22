@@ -9,6 +9,7 @@
           top: 0,
           left: 0,
         },
+        selection: null,
       }
     },
     components: {
@@ -24,23 +25,28 @@
         event.preventDefault()
         this.show = !this.show
       },
-      handlePickerColor(event) {
-        this.backgroundColor = event
+      handlePickerColor(color, selection) {
+        this.backgroundColor = color
+        this.selection = selection
       },
     },
     watch: {
       backgroundColor(value) {
         const selection = window.getSelection()
-        if (selection.rangeCount === 0) return
-        const color = value
-        const range = selection.getRangeAt(0)
+        if (
+          (selection.rangeCount !== 0 && selection?.toString().length !== 0) ||
+          this.selection
+        ) {
+          const color = value
+          const range = this.selection || selection.getRangeAt(0)
 
-        const span = document.createElement('span')
-        span.style.color = color
-        span.textContent = range.toString()
+          const span = document.createElement('span')
+          span.style.color = color
+          span.textContent = range.toString()
 
-        range.deleteContents()
-        range.insertNode(span)
+          range.deleteContents()
+          range.insertNode(span)
+        }
       },
     },
   }
@@ -48,12 +54,9 @@
 
 <template>
   <main class="main">
-    <div style="margin-bottom: 12px">Hello Xin chào các bạn</div>
-    <input
-      type="color"
-      :value="backgroundColor"
-      @change="($event) => handlePickerColor($event.target.value)"
-    />
+    <div style="margin-bottom: 12px">
+      Hello Xin chào các bạn, Đây là đoạn thử thay đổi màu chữ
+    </div>
     <div
       @mousedown="toggle"
       class="color-picker"
