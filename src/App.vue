@@ -1,6 +1,6 @@
 <script>
   import ColorPicker from './components/ColorPicker.vue'
-  import ColorCustom from './components/ColorCustom.vue'
+  import ColorPickerCustom from './components/ColorPickerCustom.vue'
   export default {
     data() {
       return {
@@ -15,7 +15,7 @@
     },
     components: {
       ColorPicker,
-      ColorCustom,
+      ColorPickerCustom,
     },
     mounted() {
       const picker = this.$refs.colorPicker.getBoundingClientRect()
@@ -59,14 +59,14 @@
     <div style="margin-bottom: 12px">
       Hello Xin chào các bạn, Đây là đoạn thử thay đổi màu chữ
     </div>
-    <div
+    <ColorPickerCustom/>
+
+    <!-- <div
       @mousedown="toggle"
       class="color-picker"
       ref="colorPicker"
       :style="{ backgroundColor }"
     ></div>
-
-    <ColorCustom />
 
     <Teleport to="body">
       <div
@@ -84,7 +84,7 @@
           @blur="show = false"
         />
       </div>
-    </Teleport>
+    </Teleport> -->
   </main>
 </template>
 

@@ -517,6 +517,10 @@
         </div>
       </div>
     </div>
+    <div class="color-picker-buttons">
+      <button class="color-picker-cancel">Cancel</button>
+      <button class="color-picker-apply">Apply</button>
+    </div>
   </div>
 </template>
 
@@ -524,6 +528,27 @@
   div {
     margin: 0;
     padding: 0;
+  }
+
+  button {
+    all: unset;
+    padding: 6px 16px;
+    border-radius: 4px;
+  }
+
+  .color-picker-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 12px;
+  }
+
+  .color-picker-cancel {
+    border: 1px solid var(--divider, #e0e0e0);
+  }
+
+  .color-picker-apply {
+    color: white;
+    background-color: var(--primary, #1677ff);
   }
 
   input {

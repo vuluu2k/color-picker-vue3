@@ -77,6 +77,9 @@
       onMouseLeaveColor() {
         this.previewColor = this.value
       },
+      onAdd() {
+        this.$emit('setView', 'ColorPicker')
+      },
     },
   }
 </script>
@@ -109,7 +112,9 @@
 
       <div class="color-custom-add">
         <div class="color-custom-add-title">My colors</div>
-        <div class="color-custom-add-action">+ Add</div>
+        <div class="color-custom-add-action" @mousedown.prevent="onAdd">
+          + Add
+        </div>
       </div>
       <div class="color-custom-colors">
         <div
