@@ -1,5 +1,6 @@
 <script>
   import ColorPicker from './components/ColorPicker.vue'
+  import ColorCustom from './components/ColorCustom.vue'
   export default {
     data() {
       return {
@@ -14,6 +15,7 @@
     },
     components: {
       ColorPicker,
+      ColorCustom,
     },
     mounted() {
       const picker = this.$refs.colorPicker.getBoundingClientRect()
@@ -63,6 +65,8 @@
       ref="colorPicker"
       :style="{ backgroundColor }"
     ></div>
+
+    <ColorCustom />
 
     <Teleport to="body">
       <div
