@@ -1,8 +1,6 @@
 <script>
   export default {
-    setup() {
-      return {}
-    },
+    emits: ['change'],
     props: {
       value: {
         type: String,
@@ -80,6 +78,9 @@
       onAdd() {
         this.$emit('setView', 'ColorPicker')
       },
+      onSelectColor(color) {
+        this.$emit('change', color)
+      },
     },
   }
 </script>
@@ -103,6 +104,7 @@
             v-for="(color, index) in theme"
             @mouseover="onMouseOverColor"
             @mouseleave="onMouseLeaveColor"
+            @mousedown.stop.prevent="onSelectColor(color)"
             :data-color="color"
             :key="index"
             :style="{ background: color }"
@@ -125,6 +127,7 @@
           <div
             @mouseover="onMouseOverColor"
             @mouseleave="onMouseLeaveColor"
+            @mousedown.stop.prevent="onSelectColor(color)"
             :data-color="color"
             class="color-custom-item-inner"
             :style="{ background: color }"
@@ -141,7 +144,7 @@
     width: 240px;
   }
   .color-custom-container {
-    padding: 22px;
+    padding: 0px 12px;
   }
   .color-custom-add {
     display: flex;
@@ -162,23 +165,23 @@
     gap: 6px 0;
   }
   .color-custom-item {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     flex: 0 1 calc(100% / 6);
     display: flex;
     justify-content: center;
     align-items: center;
   }
   .color-custom-item-inner {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     box-shadow: inset 0 0 0 1px hsla(0, 0%, 78.4%, 0.5);
     transition: 0.2s;
   }
   .color-custom-item-inner:hover {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
   }
   .color-custom-display {
     margin-top: 12px;
@@ -193,8 +196,8 @@
   }
   .color-custom-theme-color {
     position: relative;
-    width: 42px;
-    height: 18px;
+    width: 48px;
+    height: 20px;
     box-sizing: border-box;
     cursor: pointer;
     box-shadow: 0 0 0 1px hsla(0, 0%, 78.4%, 0.5);

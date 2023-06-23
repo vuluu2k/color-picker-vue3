@@ -266,9 +266,6 @@
         document.removeEventListener('mousemove', this.onMouseMoveAlpha)
         document.removeEventListener('mouseup', this.onMouseUpAlpha)
       },
-      onBlur(event) {
-        this.$emit('blur', event)
-      },
       onMouseDownInput(event) {
         this.savedSelection()
       },
@@ -318,7 +315,7 @@
 </script>
 
 <template>
-  <div class="color-picker-panel" tabindex="-1">
+  <div class="color-picker-panel">
     <div class="color-picker-select">
       <div
         class="color-picker-palette"

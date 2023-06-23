@@ -1,26 +1,15 @@
 <script>
-  import ColorPicker from './components/ColorPicker.vue'
   import ColorPickerCustom from './components/ColorPickerCustom.vue'
   export default {
     data() {
       return {
         show: false,
         backgroundColor: '#1677ff',
-        pickerGps: {
-          top: 0,
-          left: 0,
-        },
         selection: null,
       }
     },
     components: {
-      ColorPicker,
       ColorPickerCustom,
-    },
-    mounted() {
-      const picker = this.$refs.colorPicker.getBoundingClientRect()
-      this.pickerGps.top = picker.bottom + 2
-      this.pickerGps.left = picker.left
     },
     methods: {
       toggle(event) {
@@ -59,32 +48,8 @@
     <div style="margin-bottom: 12px">
       Hello Xin chào các bạn, Đây là đoạn thử thay đổi màu chữ
     </div>
-    <ColorPickerCustom/>
 
-    <!-- <div
-      @mousedown="toggle"
-      class="color-picker"
-      ref="colorPicker"
-      :style="{ backgroundColor }"
-    ></div>
-
-    <Teleport to="body">
-      <div
-        v-if="show"
-        :style="{
-          position: 'absolute',
-          top: `${pickerGps.top}px`,
-          left: `${pickerGps.left}px`,
-        }"
-        ref="pickerPanel"
-      >
-        <ColorPicker
-          :value="backgroundColor"
-          @change="handlePickerColor"
-          @blur="show = false"
-        />
-      </div>
-    </Teleport> -->
+    <ColorPickerCustom v-model:value="backgroundColor" />
   </main>
 </template>
 
