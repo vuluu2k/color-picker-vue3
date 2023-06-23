@@ -27,6 +27,8 @@
           top: 0,
           left: 0,
         },
+        startY: 0,
+        startX: 0,
       }
     },
     methods: {
@@ -42,12 +44,15 @@
         this.$emit('update:value', color)
       },
       onMouseDownLocation(event) {
+        const headerRect = this.$refs.pickerHeader.getBoundingClientRect()
+        this.startY = event.clientY - headerRect.top
+        this.startX = event.clientX - headerRect.left
         document.addEventListener('mousemove', this.onMouseMoveLocation)
         document.addEventListener('mouseup', this.onMouseUpLocation)
       },
       onMouseMoveLocation(event) {
-        this.pickerLocation.top = event.clientY
-        this.pickerLocation.left = event.clientX
+        this.pickerLocation.top = event.clientY - this.startY
+        this.pickerLocation.left = event.clientX - this.startX
       },
       onMouseUpLocation(event) {
         document.removeEventListener('mousemove', this.onMouseMoveLocation)
@@ -64,7 +69,7 @@
 <template>
   <div>
     <div
-      @mousedown="toggle"
+      @mousedown.stop.prevent="toggle"
       class="picker"
       ref="picker"
       :style="{ background: value }"
@@ -82,18 +87,25 @@
       >
         <div
           class="color-picker-custom-header"
-          @mousedown.prevent="onMousedownLocation"
+          @mousedown.stop.prevent="onMouseDownLocation"
+          ref="pickerHeader"
         >
-          <div
-            class="color-picker-custom-title"
-            v-if="view == 'ColorPicker'"
-            @mousedown.stop.prevent="setView('ColorCustom')"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path
-                d="M13.5 17.914 7.086 11.5 13.5 5.086 14.914 6.5l-5 5 5 5-1.414 1.414Z"
-              ></path>
-            </svg>
+          <div class="color-picker-custom-title" v-if="view == 'ColorPicker'">
+            <span
+              class="color-picker-custom-back"
+              @mousedown.stop.prevent="setView('ColorCustom')"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                width="24"
+                height="24"
+              >
+                <path
+                  d="M13.5 17.914 7.086 11.5 13.5 5.086 14.914 6.5l-5 5 5 5-1.414 1.414Z"
+                ></path>
+              </svg>
+            </span>
             <span> Color Picker </span>
           </div>
           <div class="color-picker-custom-title" v-if="view == 'ColorCustom'">
@@ -150,6 +162,10 @@
     display: flex;
     align-items: center;
     font-weight: bold;
+  }
+  .color-picker-custom-back {
+    display: flex;
+    align-items: center;
     cursor: pointer;
   }
   .color-picker-custom-content {

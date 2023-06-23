@@ -3,7 +3,6 @@
   export default {
     data() {
       return {
-        show: false,
         backgroundColor: '#1677ff',
         selection: null,
       }
@@ -12,10 +11,6 @@
       ColorPickerCustom,
     },
     methods: {
-      toggle(event) {
-        event.preventDefault()
-        this.show = !this.show
-      },
       handlePickerColor(color, selection) {
         this.backgroundColor = color
         this.selection = selection
