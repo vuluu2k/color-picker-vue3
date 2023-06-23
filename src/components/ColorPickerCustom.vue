@@ -3,7 +3,7 @@
   import ColorPicker from './ColorPicker.vue'
 
   export default {
-    emits: ['update:value'],
+    emits: ['update:value', 'update:selection'],
     components: {
       ColorCustom,
       ColorPicker,
@@ -40,8 +40,9 @@
         this.view = view
         await this.$nextTick()
       },
-      handleColorPickerChange(color) {
+      handleColorPickerChange(color, selection) {
         this.$emit('update:value', color)
+        if (selection) this.$emit('update:selection', selection)
       },
       onMouseDownLocation(event) {
         const headerRect = this.$refs.pickerHeader.getBoundingClientRect()

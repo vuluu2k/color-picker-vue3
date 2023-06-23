@@ -1,5 +1,6 @@
 <script>
   import ColorPickerCustom from './components/ColorPickerCustom.vue'
+  import ColorGradient from './components/ColorGradient.vue'
   export default {
     data() {
       return {
@@ -9,12 +10,7 @@
     },
     components: {
       ColorPickerCustom,
-    },
-    methods: {
-      handlePickerColor(color, selection) {
-        this.backgroundColor = color
-        this.selection = selection
-      },
+      ColorGradient,
     },
     watch: {
       backgroundColor(value) {
@@ -40,11 +36,17 @@
 
 <template>
   <main class="main">
-    <div style="margin-bottom: 12px">
+    <p style="margin-bottom: 12px, min-width: 600px">
       Hello everyone, You can selection text and change color with color picker
-    </div>
+    </p>
 
-    <ColorPickerCustom v-model:value="backgroundColor" />
+    <ColorPickerCustom
+      v-model:value="backgroundColor"
+      v-model:selection="selection"
+    />
+    <div class="wrapper">
+      <ColorGradient />
+    </div>
   </main>
 </template>
 
@@ -55,11 +57,11 @@
     border-radius: 4px;
   }
 
-  .color-picker-panel {
+  .wrapper {
     padding: 8px;
     border-radius: 8px;
-    z-index: 1;
     background-color: #fff;
+    width:fit-content;
     box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
   }
 </style>
