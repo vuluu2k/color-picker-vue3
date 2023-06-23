@@ -41,7 +41,7 @@
 <template>
   <main class="main">
     <div style="margin-bottom: 12px">
-      Hello Xin chào các bạn, Đây là đoạn thử thay đổi màu chữ
+      Hello everyone, You can selection text and change color with color picker
     </div>
 
     <ColorPickerCustom v-model:value="backgroundColor" />
