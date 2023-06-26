@@ -14,9 +14,13 @@
       },
     },
     mounted() {
-      const { degree, colors } = this.parseLinearGradient(this.value)
-      this.degree = degree
-      this.processColors = colors
+      if (this.value.startsWith('linear-gradient')) {
+        const { degree, colors } = this.parseLinearGradient(this.value)
+        this.degree = degree
+        this.processColors = colors
+        this.gradientType = 'linear'
+      } else if (this.value.startsWith('radial-gradient')) {
+      }
     },
     data() {
       return {
@@ -39,6 +43,10 @@
           { color: 'rgba(145, 133, 122, 1)', x: 0 },
           { color: 'rgba(242, 222, 204, 1)', x: 128 },
         ],
+        radialPointer: {
+          x: 120,
+          y: 60,
+        },
       }
     },
     computed: {
@@ -51,7 +59,16 @@
         return colors.join(', ').trim()
       },
       gradientPreview() {
-        return `linear-gradient(${this.degree}deg, ${this.colorsPreview})`
+        const gradient =
+          this.gradientType == 'linear'
+            ? `linear-gradient(${this.degree}deg`
+            : this.gradientType == 'radial'
+            ? `radial-gradient(circle at ${
+                (this.radialPointer.x / 240) * 100
+              }% ${(this.radialPointer.y / 120) * 100}%`
+            : 'conic-gradient'
+
+        return `${gradient}, ${this.colorsPreview})`
       },
       alpha() {
         const alpha = Math.round(
@@ -65,26 +82,59 @@
       },
     },
     methods: {
-      onMouseDownLinear(event) {
+      onMouseDownGradient(event) {
         const previewRect = this.$refs.gradientPreview.getBoundingClientRect()
-        this.centalPoint.x = previewRect.left + previewRect.width / 2
-        this.centalPoint.y = previewRect.top + previewRect.height / 2
-        document.addEventListener('mousemove', this.onMouseMoveLinear)
-        document.addEventListener('mouseup', this.onMouseUpLinear)
-      },
-      onMouseMoveLinear(event) {
-        const dx = event.clientX - this.centalPoint.x
-        const dy = event.clientY - this.centalPoint.y
-
-        let angle = Math.round((Math.atan2(dx, -dy) * 180) / Math.PI)
-        if (angle < 0) {
-          angle += 360
+        if (this.gradientType == 'linear') {
+          this.centalPoint.x = previewRect.left + previewRect.width / 2
+          this.centalPoint.y = previewRect.top + previewRect.height / 2
+        } else if (this.gradientType == 'radial') {
+          this.radialPointer.x = event.clientX - previewRect.left
+          this.radialPointer.y = event.clientY - previewRect.top
         }
-        this.degree = angle
+        document.addEventListener('mousemove', this.onMouseMoveGradient)
+        document.addEventListener('mouseup', this.onMouseUpGradient)
       },
-      onMouseUpLinear(event) {
-        document.removeEventListener('mousemove', this.onMouseMoveLinear)
-        document.removeEventListener('mouseup', this.onMouseUpLinear)
+      onMouseMoveGradient(event) {
+        if (this.gradientType == 'linear') {
+          const dx = event.clientX - this.centalPoint.x
+          const dy = event.clientY - this.centalPoint.y
+
+          let angle = Math.round((Math.atan2(dx, -dy) * 180) / Math.PI)
+          if (angle < 0) {
+            angle += 360
+          }
+          this.degree = angle
+        } else if (this.gradientType == 'radial') {
+          const previewRect = this.$refs.gradientPreview.getBoundingClientRect()
+          if (
+            previewRect.top < event.clientY &&
+            event.clientY < previewRect.bottom
+          ) {
+            this.radialPointer.y = event.clientY - previewRect.top
+          }
+          if (
+            previewRect.left < event.clientX &&
+            event.clientX < previewRect.right
+          ) {
+            this.radialPointer.x = event.clientX - previewRect.left
+          }
+          if (previewRect.right <= event.clientX) {
+            this.radialPointer.x = previewRect.width
+          }
+          if (previewRect.left >= event.clientX) {
+            this.radialPointer.x = 0
+          }
+          if (previewRect.bottom <= event.clientY) {
+            this.radialPointer.y = previewRect.height
+          }
+          if (previewRect.top >= event.clientY) {
+            this.radialPointer.y = 0
+          }
+        }
+      },
+      onMouseUpGradient(event) {
+        document.removeEventListener('mousemove', this.onMouseMoveGradient)
+        document.removeEventListener('mouseup', this.onMouseUpGradient)
       },
       onMouseDownProcessColor(event) {
         const colorPickerCustom = this.$refs.colorPickerCustom
@@ -214,19 +264,13 @@
       },
     },
     watch: {
-      processColors: {
-        handler(value) {
-          this.$emit('change', this.gradientPreview)
-        },
-        deep: true,
-      },
-      degree(value) {
+      gradientPreview() {
         this.$emit('change', this.gradientPreview)
       },
     },
     beforeUnmount() {
-      document.removeEventListener('mousemove', this.onMouseMoveLinear)
-      document.removeEventListener('mouseup', this.onMouseUpLinear)
+      document.removeEventListener('mousemove', this.onMouseMoveGradient)
+      document.removeEventListener('mouseup', this.onMouseUpGradient)
       document.removeEventListener('mousemove', this.onMouseMoveProcessColor)
       document.removeEventListener('mouseup', this.onMouseUpProcessColor)
       document.removeEventListener('mousemove', this.onMouseMoveOpacity)
@@ -238,7 +282,10 @@
 <template>
   <div class="color-gradient">
     <div class="color-gradient-select">
-      <select style="width: 196px; margin: 0 22px; padding: 0 12px">
+      <select
+        v-model="gradientType"
+        style="width: 196px; margin: 0 22px; padding: 0 12px"
+      >
         <option value="linear">Linear</option>
         <option value="radial">Radial</option>
         <option value="conic">Conic</option>
@@ -248,18 +295,32 @@
       <div
         class="color-gradient-preview"
         ref="gradientPreview"
-        @mousedown.stop.prevent="onMouseDownLinear"
+        @mousedown.stop.prevent="onMouseDownGradient"
         :style="{
           'background-image': gradientPreview,
         }"
       >
-        <div class="color-gradient-preview-action">
+        <div
+          class="color-gradient-preview-action"
+          v-if="gradientType == 'linear'"
+        >
           <div class="color-gradient-preview-overlay"></div>
           <div
             class="color-gradient-preview-slider"
             :style="{ transform: `rotate(${degree}deg)` }"
           ></div>
           <div class="color-gradient-preview-degree">{{ degree }}</div>
+        </div>
+        <div
+          class="color-gradient-preview-radial"
+          v-if="gradientType == 'radial'"
+        >
+          <div
+            class="color-gradient-preview-radial-pointer"
+            :style="{
+              transform: `translateX(${radialPointer.x}px) translateY(${radialPointer.y}px)`,
+            }"
+          ></div>
         </div>
       </div>
 
@@ -734,5 +795,28 @@
     right: 6px;
     top: 9px;
     font-size: 12px;
+  }
+
+  .color-gradient-preview-radial {
+    width: 240px;
+    height: 120px;
+    position: relative;
+    --handle-width: 12px;
+    --handle-height: 12px;
+    --handle-shadow: 0 1px 3px 0 rgba(43, 86, 114, 0.73);
+    --handle-border: none;
+    --handle-color: #fff;
+  }
+  .color-gradient-preview-radial-pointer {
+    position: absolute;
+    width: var(--handle-width, 17px);
+    height: var(--handle-height, 17px);
+    margin-left: calc(-1 * var(--handle-width, 17px) / 2);
+    margin-top: calc(-1 * var(--handle-height, 17px) / 2);
+    box-shadow: var(--handle-shadow, 0 2px 4px 0 rgba(0, 0, 0, 0.5));
+    border: var(--handle-border, solid 2px #fff);
+    background-color: var(--handle-color, #1f77ff);
+    border-radius: 50%;
+    box-sizing: border-box;
   }
 </style>
