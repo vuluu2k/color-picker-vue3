@@ -3,7 +3,7 @@
   import ColorPicker from './ColorPicker.vue'
 
   export default {
-    emits: ['update:value', 'update:selection'],
+    emits: ['update:value', 'update:selection', 'change'],
     components: {
       ColorCustom,
       ColorPicker,
@@ -42,6 +42,7 @@
       },
       handleColorPickerChange(color, selection) {
         this.$emit('update:value', color)
+        this.$emit('change', color)
         if (selection) this.$emit('update:selection', selection)
       },
       onMouseDownLocation(event) {
@@ -147,6 +148,22 @@
     width: 26px;
     height: 26px;
     border-radius: 4px;
+    position: relative;
+  }
+  .picker::before {
+    width: 100%;
+    height: 100%;
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    background-image: repeating-conic-gradient(
+      from 0deg,
+      #fff 0 25%,
+      #ededed 0 50%
+    );
+    background-size: 10px 10px;
   }
   .color-picker-custom-header {
     padding: 6px 8px;

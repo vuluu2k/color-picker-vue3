@@ -1,16 +1,17 @@
 <script>
+  import ColorPickerCustom from './ColorPickerCustom.vue'
+
   export default {
-    setup() {
-      return {
-        colorGradients: [
+    emits: ['change'],
+    components: {
+      ColorPickerCustom,
+    },
+    props: {
+      value: {
+        type: String,
+        default:
           'linear-gradient(90deg, rgb(145, 133, 122) 0%, rgb(242, 222, 204) 100%)',
-          'linear-gradient(50.4988deg, rgb(127, 148, 99) 17.0105%, rgb(242, 222, 204) 48.2697%, rgb(56, 74, 211) 80.9021%)',
-          'radial-gradient(circle at 50% 50%, rgb(56, 74, 211) 15.0635%, rgb(232, 234, 237) 80.2887%)',
-          'radial-gradient(circle at 32% 26%, rgb(209, 219, 195) 0%, rgb(127, 148, 99) 36.0321%, rgb(37, 49, 141) 75.6775%)',
-          'conic-gradient(from 152deg at 50% 50%, rgb(0, 87, 225) 0%, rgb(249, 197, 180) 68%, rgb(0, 87, 225) 100%)',
-          'conic-gradient(from 136deg at 50% 0%, rgb(85, 14, 155) 0%, rgb(128, 21, 232) 6%, rgb(243, 167, 143) 12%, rgb(85, 14, 155) 28%)',
-        ],
-      }
+      },
     },
     data() {
       return {
@@ -19,7 +20,43 @@
           x: 0,
           y: 0,
         },
+        gradientColors: [
+          'linear-gradient(90deg, rgb(145, 133, 122) 0%, rgb(242, 222, 204) 100%)',
+          'linear-gradient(50.4988deg, rgb(127, 148, 99) 17.0105%, rgb(242, 222, 204) 48.2697%, rgb(56, 74, 211) 80.9021%)',
+          'radial-gradient(circle at 50% 50%, rgb(56, 74, 211) 15.0635%, rgb(232, 234, 237) 80.2887%)',
+          'radial-gradient(circle at 32% 26%, rgb(209, 219, 195) 0%, rgb(127, 148, 99) 36.0321%, rgb(37, 49, 141) 75.6775%)',
+          'conic-gradient(from 152deg at 50% 50%, rgb(0, 87, 225) 0%, rgb(249, 197, 180) 68%, rgb(0, 87, 225) 100%)',
+          'conic-gradient(from 136deg at 50% 0%, rgb(85, 14, 155) 0%, rgb(128, 21, 232) 6%, rgb(243, 167, 143) 12%, rgb(85, 14, 155) 28%)',
+        ],
+        selectedColorIndex: 0,
+        processColors: [
+          { color: 'rgba(145, 133, 122, 1)', x: 0 },
+          { color: 'rgba(242, 222, 204, 1)', x: 128 },
+        ],
       }
+    },
+    computed: {
+      colorsPreview() {
+        const colors = this.processColors.map((process) => {
+          const processPercent = Math.round((process.x / 128) * 100)
+          return `${process.color} ${processPercent}%`
+        })
+
+        return colors.join(', ').trim()
+      },
+      gradientPreview() {
+        return `linear-gradient(${this.degree}deg, ${this.colorsPreview})`
+      },
+      alpha() {
+        const alpha = Math.round(
+          Number(
+            this.processColors[this.selectedColorIndex].color
+              .split(',')[3]
+              .replace(')', '')
+          ) * 100
+        )
+        return alpha
+      },
     },
     methods: {
       onMouseDownLinear(event) {
@@ -43,10 +80,121 @@
         document.removeEventListener('mousemove', this.onMouseMoveLinear)
         document.removeEventListener('mouseup', this.onMouseUpLinear)
       },
+      onMouseDownProcessColor(event) {
+        const colorPickerCustom = this.$refs.colorPickerCustom
+        if (event.target.id !== 'processPointer') {
+          colorPickerCustom.toggle(event)
+          const processRect = processColor.getBoundingClientRect()
+          const processX = event.clientX - processRect.left
+          const newColor = { color: colorPickerCustom.value, x: processX }
+
+          let insertIndex = -1
+          for (let i = 0; i < this.processColors.length; i++) {
+            if (this.processColors[i].x === newColor.x) {
+              insertIndex = i
+              break
+            } else if (this.processColors[i].x > newColor.x) {
+              insertIndex = i
+              break
+            }
+          }
+
+          if (insertIndex === -1) {
+            this.processColors.push(newColor)
+            this.selectedColorIndex = this.processColors.length - 1
+          } else {
+            this.processColors.splice(insertIndex, 0, newColor)
+            this.selectedColorIndex = insertIndex
+          }
+        } else {
+          document.addEventListener('mousemove', this.onMouseMoveProcessColor)
+          document.addEventListener('mouseup', this.onMouseUpProcessColor)
+        }
+      },
+      onMouseMoveProcessColor(event) {
+        const processRect = processColor.getBoundingClientRect()
+        if (
+          processRect.left <= event.clientX &&
+          event.clientX <= processRect.right
+        ) {
+          const processX = event.clientX - processRect.left
+          this.processColors[this.selectedColorIndex].x = processX
+        }
+        if (event.clientX <= processRect.left) {
+          this.processColors[this.selectedColorIndex].x = 0
+        }
+        if (event.clientX >= processRect.right) {
+          this.processColors[this.selectedColorIndex].x = processRect.width
+        }
+      },
+      onMouseUpProcessColor(event) {
+        document.removeEventListener('mousemove', this.onMouseMoveProcessColor)
+        document.removeEventListener('mouseup', this.onMouseUpProcessColor)
+      },
+      onMouseDownOpacity(event) {
+        const opacityRect = this.$refs.opacityColor.getBoundingClientRect()
+        const alpha = (event.clientX - opacityRect.left) / opacityRect.width
+        this.processColors[this.selectedColorIndex].color = this.replaceAlpha(
+          this.processColors[this.selectedColorIndex].color,
+          alpha.toFixed(2)
+        )
+        document.addEventListener('mousemove', this.onMouseMoveOpacity)
+        document.addEventListener('mouseup', this.onMouseUpOpacity)
+      },
+      onMouseMoveOpacity(event) {
+        const opacityRect = this.$refs.opacityColor.getBoundingClientRect()
+        let alpha
+
+        if (
+          opacityRect.left <= event.clientX &&
+          event.clientX <= opacityRect.right
+        ) {
+          alpha = (event.clientX - opacityRect.left) / opacityRect.width
+        }
+        if (event.clientX <= opacityRect.left) {
+          alpha = 0
+        }
+        if (event.clientX >= opacityRect.right) {
+          alpha = 1
+        }
+        this.processColors[this.selectedColorIndex].color = this.replaceAlpha(
+          this.processColors[this.selectedColorIndex].color,
+          alpha.toFixed(2)
+        )
+      },
+      onMouseUpOpacity(event) {
+        document.removeEventListener('mousemove', this.onMouseMoveOpacity)
+        document.removeEventListener('mouseup', this.onMouseUpOpacity)
+      },
+      replaceAlpha(rgbaString, newAlpha) {
+        return rgbaString.replace(/[^,]+(?=\))/, newAlpha)
+      },
+      handleChangeColor(color) {
+        this.processColors[this.selectedColorIndex].color = color
+      },
+      handleChangeAlpha(event) {
+        const alpha = event.target.value / 100
+        this.processColors[this.selectedColorIndex].color = this.replaceAlpha(
+          this.processColors[this.selectedColorIndex].color,
+          alpha.toFixed(2)
+        )
+      },
+      handleFlipColor() {
+        this.processColors = this.processColors
+          .reverse()
+          .map((process) => ({ ...process, x: 128 - process.x }))
+      },
+      handleDeleteColor() {
+        if (this.processColors.length > 2) this.processColors.pop()
+      },
     },
     beforeUnmount() {
       document.removeEventListener('mousemove', this.onMouseMoveLinear)
       document.removeEventListener('mouseup', this.onMouseUpLinear)
+      document.removeEventListener('mousemove', this.onMouseMoveProcessColor)
+      document.removeEventListener('mouseup', this.onMouseUpProcessColor)
+      document.removeEventListener('mousemove', this.onMouseMoveOpacity)
+      document.removeEventListener('mouseup', this.onMouseUpOpacity)
     },
   }
 </script>
@@ -66,7 +214,7 @@
         ref="gradientPreview"
         @mousedown.stop.prevent="onMouseDownLinear"
         :style="{
-          'background-image': `linear-gradient(${degree}deg, rgb(145, 133, 122) 0%, rgb(242, 222, 204) 100%)`,
+          'background-image': gradientPreview,
         }"
       >
         <div class="color-gradient-preview-action">
@@ -81,25 +229,47 @@
 
       <div class="color-gradient-change">
         <div class="color-gradient-process">
-          <div class="color-gradient-processing">
-            <div class="color-gradient-processing-overlay">
+          <div
+            class="color-gradient-processing"
+            :style="{
+              'background-image': `linear-gradient(90deg, ${this.colorsPreview})`,
+            }"
+          >
+            <div
+              class="color-gradient-processing-overlay"
+              @mousedown.prevent="onMouseDownProcessColor"
+              ref="processColor"
+              id="processColor"
+            >
               <div
-                class="color-gradient-processing-node color-gradient-processing-node-left"
-                data-selected
-              ></div>
-              <div
-                class="color-gradient-processing-node color-gradient-processing-node-right"
-              ></div>
+                class="color-gradient-processing-node"
+                v-for="(processColor, index) in processColors"
+                :style="{
+                  '--handle-color': processColor.color,
+                  '--handle-translate-x': `${processColor.x}px`,
+                  '--handle-translate-y': 0,
+                }"
+                :data-selected="selectedColorIndex == index"
+                :key="index"
+                @mousedown.prevent="selectedColorIndex = index"
+                id="processPointer"
+              />
             </div>
           </div>
-          <div class="color-gradient-flip-color">
+          <div
+            class="color-gradient-flip-color"
+            @mousedown.prevent="handleFlipColor"
+          >
             <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
               <path
                 d="M7.70710678,8 L9.85355339,10.1464466 C10.0488155,10.3417088 10.0488155,10.6582912 9.85355339,10.8535534 C9.65829124,11.0488155 9.34170876,11.0488155 9.14644661,10.8535534 L5.79289322,7.5 L9.14644661,4.14644661 C9.34170876,3.95118446 9.65829124,3.95118446 9.85355339,4.14644661 C10.0488155,4.34170876 10.0488155,4.65829124 9.85355339,4.85355339 L7.70710678,7 L12,7 C15.3137085,7 18,9.6862915 18,13 L17,13 C17,10.2385763 14.7614237,8 12,8 L7.70710678,8 Z M16.2928932,16 L14.1464466,13.8535534 C13.9511845,13.6582912 13.9511845,13.3417088 14.1464466,13.1464466 C14.3417088,12.9511845 14.6582912,12.9511845 14.8535534,13.1464466 L18.2071068,16.5 L14.8535534,19.8535534 C14.6582912,20.0488155 14.3417088,20.0488155 14.1464466,19.8535534 C13.9511845,19.6582912 13.9511845,19.3417088 14.1464466,19.1464466 L16.2928932,17 L12,17 C8.6862915,17 6,14.3137085 6,11 L7,11 C7,13.7614237 9.23857625,16 12,16 L16.2928932,16 Z"
               ></path>
             </svg>
           </div>
-          <div class="color-gradient-delete-color">
+          <div
+            class="color-gradient-delete-color"
+            @mousedown.prevent="handleDeleteColor"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -117,17 +287,37 @@
         </div>
       </div>
 
-      <div class="color-gradient-custom" :style="{ '--color': '#F2DECC' }">
+      <div
+        class="color-gradient-custom"
+        :style="{ '--color': processColors[selectedColorIndex].color }"
+      >
         <div
+          ref="opacityColor"
           class="color-gradient-opacity"
-          :style="{ '--range-input-value': '1', '--range-input-width': '80px' }"
+          :style="{
+            '--range-input-value': alpha / 100,
+            '--range-input-width': '80px',
+          }"
+          @mousedown.prevent="onMouseDownOpacity"
         >
           <span class="color-gradient-opacity-range"></span>
         </div>
         <div class="color-gradient-opacity-input">
-          <input type="number" />
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="1"
+            v-model="alpha"
+            @input="handleChangeAlpha"
+          />
+          <span>%</span>
         </div>
-        <div class="color-gradient-select-color"></div>
+        <ColorPickerCustom
+          :value="processColors[selectedColorIndex].color"
+          @change="handleChangeColor"
+          ref="colorPickerCustom"
+        />
       </div>
 
       <div class="color-gradient-add">
@@ -139,7 +329,7 @@
         <div class="color-gradient-add-preview">
           <div
             class="color-gradient-add-preview-item"
-            v-for="gradient in colorGradients"
+            v-for="gradient in gradientColors"
           >
             <div
               class="color-gradient-add-preview-item-inner"
@@ -165,20 +355,37 @@
   }
 
   input {
-    all: unset;
-    height: 28px;
-    border-radius: 4px;
-    padding: 0 6px;
-    color: #2b5672;
+    -webkit-font-smoothing: antialiased;
+    box-sizing: border-box;
+    height: 32px;
+    border: 1px solid transparent;
+    padding: 0;
+    outline: none;
+    border-radius: 8px;
+    color: #162d3d;
+    text-align: center;
+    text-overflow: clip;
+    width: 100%;
+    font-size: 14px;
+    line-height: normal;
+    padding-right: calc(14px * 1.3);
   }
 
   input[type='number'] {
-    width: 42px;
+    -moz-appearance: textfield;
   }
 
   input:focus {
     border-color: var(--primary, #1677ff);
   }
+
+  /* Chrome, Safari, Edge, Opera */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
   .color-gradient {
     width: fit-content;
   }
@@ -281,11 +488,6 @@
     border-radius: 6px;
     --height: 12px;
     --width: 128px;
-    background-image: linear-gradient(
-      90deg,
-      rgb(145, 133, 122) 3.10364%,
-      rgb(242, 222, 204) 100%
-    );
   }
   .color-gradient-processing:first-child {
     margin: 0 14px 0 0;
@@ -335,7 +537,7 @@
     background-color: var(--handle-color, #fff);
     border-radius: 50%;
   }
-  .color-gradient-processing-node[data-selected]::after {
+  .color-gradient-processing-node[data-selected='true']::after {
     content: '';
     position: absolute;
     top: 28px;
@@ -347,17 +549,6 @@
     border-top: 1px solid #aec0cf;
     border-left: 1px solid #aec0cf;
     border-radius: 1px 0 0 0;
-  }
-
-  .color-gradient-processing-node-left {
-    --handle-color: rgba(145, 133, 122, 1);
-    --handle-translate-x: 0px;
-    --handle-translate-y: 0px;
-  }
-  .color-gradient-processing-node-right {
-    --handle-color: rgba(242, 222, 204, 1);
-    --handle-translate-x: 127.91015625px;
-    --handle-translate-y: 0px;
   }
   .color-gradient-flip-color,
   .color-gradient-delete-color {
@@ -403,11 +594,11 @@
     left: 0;
     height: 100%;
     width: 100%;
-    background-image: conic-gradient(
-      rgba(0, 0, 0, 0.06) 0 25%,
-      transparent 0 50%,
-      rgba(0, 0, 0, 0.06) 0 75%,
-      transparent 0
+    z-index: -1;
+    background-image: repeating-conic-gradient(
+      from 0deg,
+      #fff 0 25%,
+      #ededed 0 50%
     );
     background-size: 8px 8px;
   }
@@ -489,5 +680,23 @@
     margin: 0 auto;
     width: 26px;
     height: 26px;
+  }
+  .color-gradient-opacity-input {
+    display: flex;
+    width: 50px;
+    min-width: 50px;
+    align-items: center;
+    position: relative;
+  }
+  .color-gradient-opacity-input > span {
+    position: absolute;
+    margin-left: calc(var(--font-size) * -1.2);
+    font-family: sans-serif;
+    font-size: calc(var(--font-size) * 0.9);
+    -webkit-font-smoothing: antialiased;
+    pointer-events: none;
+    right: 6px;
+    top: 9px;
+    font-size: 12px;
   }
 </style>

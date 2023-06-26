@@ -9,7 +9,7 @@
       },
       output: {
         type: String,
-        default: 'hex',
+        default: 'rgb',
       },
     },
     data() {
@@ -28,7 +28,7 @@
           blue: 0,
         },
         hex: '#000000',
-        alpha: 0,
+        alpha: -1,
         clientXGradient: 0,
         clientXAlpha: 0,
         selection: null,
@@ -43,7 +43,16 @@
         this.handleHex(this.value)
       }
       if (this.value.startsWith('rgb')) {
-        this.rgb = {}
+        const rgbaRegex = /rgba?\((\d+),\s*(\d+),\s*(\d+),?\s*([\d\.]+)?\)/i
+        const matches = this.value.match(rgbaRegex)
+
+        if (matches) {
+          this.rgb.red = parseInt(matches[1])
+          this.rgb.green = parseInt(matches[2])
+          this.rgb.blue = parseInt(matches[3])
+          this.alpha = matches[4] ? parseFloat(matches[4]) * 100 : 100
+        }
+        this.handleRgb(this.rgb.red, this.rgb.green, this.rgb.blue)
       }
     },
     computed: {
@@ -168,6 +177,9 @@
         const green = name == 'green' ? Number(value) : this.rgb.green
         const blue = name == 'blue' ? Number(value) : this.rgb.blue
 
+        this.handleRgb(red, green, blue)
+      },
+      handleRgb(red, green, blue) {
         ;[this.hsb.hue, this.hsb.saturation, this.hsb.brightness] =
           this.rgbToHsb(red, green, blue)
         this.hex = `#${this.rgbToHex(red, green, blue)}`
@@ -193,7 +205,6 @@
         ;[this.hsb.hue, this.hsb.saturation, this.hsb.brightness] =
           this.rgbToHsb(red, green, blue)
       },
-      handleAlphaInput(event) {},
       onMouseDown(event) {
         event.preventDefault()
         const selectRect = this.$refs.pickerSelect.getBoundingClientRect()
@@ -302,13 +313,42 @@
           this.clientY =
             selectRect.height * ((100 - value.brightness) / 100) - 8
 
-          this.$emit('change', this.output == 'hex' && this.hex, this.selection)
+          this.$emit(
+            'change',
+            (this.output == 'hex' && this.hex) ||
+              (this.output == 'rgb' && this.backgroundBlock),
+            this.selection
+          )
         },
         deep: true,
       },
       alpha(value) {
         const alphaRect = this.$refs.pickerAlpha.getBoundingClientRect()
         this.clientXAlpha = alphaRect.width * (value / 100) - 6
+        this.$emit(
+          'change',
+          (this.output == 'hex' && this.hex) ||
+            (this.output == 'rgb' && this.backgroundBlock),
+          this.selection
+        )
+      },
+      value(newValue) {
+        if (newValue.startsWith('#')) {
+          this.hex = newValue
+          this.handleHex(newValue)
+        }
+        if (newValue.startsWith('rgb')) {
+          const rgbaRegex = /rgba?\((\d+),\s*(\d+),\s*(\d+),?\s*([\d\.]+)?\)/i
+          const matches = newValue.match(rgbaRegex)
+
+          if (matches) {
+            this.rgb.red = parseInt(matches[1])
+            this.rgb.green = parseInt(matches[2])
+            this.rgb.blue = parseInt(matches[3])
+            this.alpha = matches[4] ? parseFloat(matches[4]) * 100 : 100
+          }
+          this.handleRgb(this.rgb.red, this.rgb.green, this.rgb.blue)
+        }
       },
     },
   }
@@ -509,7 +549,6 @@
             max="100"
             maxlength="3"
             v-model="alpha"
-            @input="handleAlphaInput"
           />
         </div>
       </div>
@@ -558,11 +597,16 @@
   }
 
   input[type='number'] {
-    width: 42px;
+    -moz-appearance: textfield;
   }
-
   input:focus {
     border-color: var(--primary, #1677ff);
+  }
+  /* Chrome, Safari, Edge, Opera */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
   }
 
   .color-picker-panel {

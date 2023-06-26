@@ -60,7 +60,7 @@
   .wrapper {
     padding: 8px;
     border-radius: 8px;
-    background-color: #fff;
+    /* background-color: #fff; */
     width:fit-content;
     box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
   }
