@@ -310,19 +310,6 @@
       gradientPreview() {
         this.$emit('change', this.gradientPreview)
       },
-      value(newValue) {
-        if (newValue.startsWith('linear-gradient')) {
-          const { degree, colors } = this.parseLinearGradient(newValue)
-          this.degree = degree
-          this.processColors = colors
-          this.gradientType = 'linear'
-        } else if (newValue.startsWith('radial-gradient')) {
-          const { position, colors } = this.parseRadialGradient(newValue)
-          this.radialPointer = position
-          this.processColors = colors
-          this.gradientType = 'radial'
-        }
-      },
     },
     beforeUnmount() {
       document.removeEventListener('mousemove', this.onMouseMoveGradient)
