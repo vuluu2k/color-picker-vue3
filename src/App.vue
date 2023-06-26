@@ -4,8 +4,9 @@
   export default {
     data() {
       return {
-        backgroundColor: '#1677ff',
+        color: '#1677ff',
         selection: null,
+        background: '#FFFFFF',
       }
     },
     components: {
@@ -13,7 +14,7 @@
       ColorGradient,
     },
     watch: {
-      backgroundColor(value) {
+      color(value) {
         const selection = window.getSelection()
         if (
           (selection.rangeCount !== 0 && selection?.toString().length !== 0) ||
@@ -40,10 +41,9 @@
       Hello everyone, You can selection text and change color with color picker
     </p>
 
-    <ColorPickerCustom
-      v-model:value="backgroundColor"
-      v-model:selection="selection"
-    />
+    <div class="background-test"></div>
+
+    <ColorPickerCustom v-model:value="color" v-model:selection="selection" />
     <div class="wrapper">
       <ColorGradient />
     </div>
@@ -61,7 +61,11 @@
     padding: 8px;
     border-radius: 8px;
     /* background-color: #fff; */
-    width:fit-content;
+    width: fit-content;
     box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+  }
+  
+  .background-test{
+    
   }
 </style>

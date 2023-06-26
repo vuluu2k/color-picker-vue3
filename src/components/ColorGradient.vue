@@ -10,8 +10,13 @@
       value: {
         type: String,
         default:
-          'linear-gradient(90deg, rgb(145, 133, 122) 0%, rgb(242, 222, 204) 100%)',
+          'linear-gradient(90deg, rgba(145, 133, 122, 1) 0%, rgba(242, 222, 204, 1) 100%)',
       },
+    },
+    mounted() {
+      const { degree, colors } = this.parseLinearGradient(this.value)
+      this.degree = degree
+      this.processColors = colors
     },
     data() {
       return {
@@ -20,13 +25,14 @@
           x: 0,
           y: 0,
         },
+        gradientType: 'linear',
         gradientColors: [
-          'linear-gradient(90deg, rgb(145, 133, 122) 0%, rgb(242, 222, 204) 100%)',
-          'linear-gradient(50.4988deg, rgb(127, 148, 99) 17.0105%, rgb(242, 222, 204) 48.2697%, rgb(56, 74, 211) 80.9021%)',
-          'radial-gradient(circle at 50% 50%, rgb(56, 74, 211) 15.0635%, rgb(232, 234, 237) 80.2887%)',
-          'radial-gradient(circle at 32% 26%, rgb(209, 219, 195) 0%, rgb(127, 148, 99) 36.0321%, rgb(37, 49, 141) 75.6775%)',
-          'conic-gradient(from 152deg at 50% 50%, rgb(0, 87, 225) 0%, rgb(249, 197, 180) 68%, rgb(0, 87, 225) 100%)',
-          'conic-gradient(from 136deg at 50% 0%, rgb(85, 14, 155) 0%, rgb(128, 21, 232) 6%, rgb(243, 167, 143) 12%, rgb(85, 14, 155) 28%)',
+          'linear-gradient(90deg, rgba(145, 133, 122, 1) 0%, rgba(242, 222, 204, 1) 100%)',
+          'linear-gradient(50.4988deg, rgba(127, 148, 99, 1) 17.0105%, rgba(242, 222, 204, 1) 48.2697%, rgba(56, 74, 211, 1) 80.9021%)',
+          'radial-gradient(circle at 50% 50%, rgba(56, 74, 211, 1) 15.0635%, rgba(232, 234, 237, 1) 80.2887%)',
+          'radial-gradient(circle at 32% 26%, rgba(209, 219, 195, 1) 0%, rgba(127, 148, 99, 1) 36.0321%, rgba(37, 49, 141, 1) 75.6775%)',
+          'conic-gradient(from 152deg at 50% 50%, rgba(0, 87, 225, 1) 0%, rgba(249, 197, 180, 1) 68%, rgba(0, 87, 225, 1) 100%)',
+          'conic-gradient(from 136deg at 50% 0%, rgba(85, 14, 155, 1) 0%, rgba(128, 21, 232, 1) 6%, rgba(243, 167, 143, 1) 12%, rgba(85, 14, 155, 1) 28%)',
         ],
         selectedColorIndex: 0,
         processColors: [
@@ -186,6 +192,36 @@
       },
       handleDeleteColor() {
         if (this.processColors.length > 2) this.processColors.pop()
+      },
+      parseLinearGradient(gradientString) {
+        const degree = gradientString.match(
+          /-?\d+(\.\d+)?(deg|grad|rad|turn)/
+        )[0]
+
+        const colors = gradientString
+          .match(/rgba\([\d\s,]+\)\s\d+(\.\d+)?%/g)
+          .map((colorString) => {
+            const [color, percent] = colorString.match(
+              /rgba\([\d\s,]+\)|\d+(\.\d+)?%/g
+            )
+            return {
+              color,
+              x: (parseFloat(percent) / 100) * 128,
+            }
+          })
+
+        return { degree: parseFloat(degree), colors }
+      },
+    },
+    watch: {
+      processColors: {
+        handler(value) {
+          this.$emit('change', this.gradientPreview)
+        },
+        deep: true,
+      },
+      degree(value) {
+        this.$emit('change', this.gradientPreview)
       },
     },
     beforeUnmount() {
