@@ -10,7 +10,7 @@
       value: {
         type: String,
         default:
-          'linear-gradient(90deg, rgba(145, 133, 122, 1) 0%, rgba(242, 222, 204, 1) 100%)',
+          'radial-gradient(circle at 50% 50%, rgba(56, 74, 211, 1) 15.0635%, rgba(232, 234, 237, 1) 80.2887%)',
       },
     },
     mounted() {
@@ -20,6 +20,10 @@
         this.processColors = colors
         this.gradientType = 'linear'
       } else if (this.value.startsWith('radial-gradient')) {
+        const { position, colors } = this.parseRadialGradient(this.value)
+        this.radialPointer = position
+        this.processColors = colors
+        this.gradientType = 'radial'
       }
     },
     data() {
@@ -243,6 +247,20 @@
       handleDeleteColor() {
         if (this.processColors.length > 2) this.processColors.pop()
       },
+      handleSelectTemplate(gradientTemplate) {
+        if (gradientTemplate.startsWith('linear-gradient')) {
+          const { degree, colors } = this.parseLinearGradient(gradientTemplate)
+          this.degree = degree
+          this.processColors = colors
+          this.gradientType = 'linear'
+        } else if (gradientTemplate.startsWith('radial-gradient')) {
+          const { position, colors } =
+            this.parseRadialGradient(gradientTemplate)
+          this.radialPointer = position
+          this.processColors = colors
+          this.gradientType = 'radial'
+        }
+      },
       parseLinearGradient(gradientString) {
         const degree = gradientString.match(
           /-?\d+(\.\d+)?(deg|grad|rad|turn)/
@@ -262,10 +280,48 @@
 
         return { degree: parseFloat(degree), colors }
       },
+      parseRadialGradient(gradientString) {
+        const [position, shape] = gradientString
+          .match(/(circle|ellipse) at [\d.]+% [\d.]+%/)
+          .map((str) => str.split(' '))
+
+        const colors = gradientString
+          .match(/rgba\([\d\s,]+\)\s\d+(\.\d+)?%/g)
+          .map((colorString) => {
+            const [color, percent] = colorString.match(
+              /rgba\([\d\s,]+\)|\d+(\.\d+)?%/g
+            )
+            return {
+              color,
+              x: (parseFloat(percent) / 100) * 128,
+            }
+          })
+        return {
+          shape: shape[0],
+          position: {
+            x: (parseFloat(position[2]) / 100) * 240,
+            y: (parseFloat(position[3]) / 100) * 120,
+          },
+          colors,
+        }
+      },
     },
     watch: {
       gradientPreview() {
         this.$emit('change', this.gradientPreview)
+      },
+      value(newValue) {
+        if (newValue.startsWith('linear-gradient')) {
+          const { degree, colors } = this.parseLinearGradient(newValue)
+          this.degree = degree
+          this.processColors = colors
+          this.gradientType = 'linear'
+        } else if (newValue.startsWith('radial-gradient')) {
+          const { position, colors } = this.parseRadialGradient(newValue)
+          this.radialPointer = position
+          this.processColors = colors
+          this.gradientType = 'radial'
+        }
       },
     },
     beforeUnmount() {
@@ -426,7 +482,9 @@
         <div class="color-gradient-add-preview">
           <div
             class="color-gradient-add-preview-item"
-            v-for="gradient in gradientColors"
+            v-for="(gradient, index) in gradientColors"
+            :key="index"
+            @mousedown.prevent="handleSelectTemplate(gradient)"
           >
             <div
               class="color-gradient-add-preview-item-inner"
