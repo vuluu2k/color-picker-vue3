@@ -20,6 +20,8 @@
       const picker = this.$refs.picker.getBoundingClientRect()
       this.pickerLocation.top = picker.bottom + 2
       this.pickerLocation.left = picker.left
+      if (this.value.includes('gradient')) this.selected = 'gradient'
+      else this.selected = 'solid'
     },
     data() {
       return {
@@ -162,7 +164,7 @@
             />
           </div>
           <div v-if="selected == 'gradient'">
-            <ColorGradient />
+            <ColorGradient :value="value" @change="handleColorPickerChange"/>
           </div>
         </div>
       </div>
