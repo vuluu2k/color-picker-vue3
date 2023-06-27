@@ -10,7 +10,7 @@
       value: {
         type: String,
         default:
-          'radial-gradient(circle at 50% 50%, rgba(56, 74, 211, 1) 15.0635%, rgba(232, 234, 237, 1) 80.2887%)',
+          'linear-gradient(90deg, rgba(145, 133, 122, 1) 0%, rgba(242, 222, 204, 1) 100%)',
       },
     },
     mounted() {
@@ -18,7 +18,7 @@
         const { degree, colors } = this.parseLinearGradient(this.value)
         this.degree = degree
         this.processColors = colors
-        this.gradientType = 'linear'
+        // this.gradientType = 'linear'
       } else if (this.value.startsWith('radial-gradient')) {
         const { position, colors } = this.parseRadialGradient(this.value)
         this.radialPointer = position
@@ -33,7 +33,7 @@
           x: 0,
           y: 0,
         },
-        gradientType: 'linear',
+        gradientType: 'conic',
         gradientColors: [
           'linear-gradient(90deg, rgba(145, 133, 122, 1) 0%, rgba(242, 222, 204, 1) 100%)',
           'linear-gradient(50.4988deg, rgba(127, 148, 99, 1) 17.0105%, rgba(242, 222, 204, 1) 48.2697%, rgba(56, 74, 211, 1) 80.9021%)',
@@ -50,6 +50,16 @@
         radialPointer: {
           x: 120,
           y: 60,
+        },
+        conicPointer: {
+          degree: 0,
+          x: 120,
+          y: 60,
+          key: '',
+          central: {
+            x: 0,
+            y: 0,
+          },
         },
       }
     },
@@ -70,7 +80,9 @@
             ? `radial-gradient(circle at ${
                 (this.radialPointer.x / 240) * 100
               }% ${(this.radialPointer.y / 120) * 100}%`
-            : 'conic-gradient'
+            : `conic-gradient(from ${this.conicPointer.degree}deg at ${
+                (this.conicPointer.x / 240) * 100
+              }% ${(this.conicPointer.y / 120) * 100}%`
 
         return `${gradient}, ${this.colorsPreview})`
       },
@@ -91,23 +103,47 @@
         if (this.gradientType == 'linear') {
           this.centalPoint.x = previewRect.left + previewRect.width / 2
           this.centalPoint.y = previewRect.top + previewRect.height / 2
+          this.degree = this.handleRoundCentral(
+            event.clientX,
+            event.clientY,
+            this.centalPoint.x,
+            this.centalPoint.y
+          )
         } else if (this.gradientType == 'radial') {
           this.radialPointer.x = event.clientX - previewRect.left
           this.radialPointer.y = event.clientY - previewRect.top
+        } else if (this.gradientType == 'conic') {
+          const conicPointerRect =
+            this.$refs.conicPointer.getBoundingClientRect()
+          if (event.target.id == 'conic-slider') {
+            this.conicPointer.central.x =
+              conicPointerRect.left + conicPointerRect.width / 2
+            this.conicPointer.central.y =
+              conicPointerRect.top + conicPointerRect.height / 2
+            this.conicPointer.degree = this.handleRoundCentral(
+              event.clientX,
+              event.clientY,
+              this.conicPointer.central.x,
+              this.conicPointer.central.y
+            )
+            this.conicPointer.key = 'conic-slider'
+          } else {
+            this.conicPointer.x = event.clientX - previewRect.left
+            this.conicPointer.y = event.clientY - previewRect.top
+            this.conicPointer.key = 'conic-pointer'
+          }
         }
         document.addEventListener('mousemove', this.onMouseMoveGradient)
         document.addEventListener('mouseup', this.onMouseUpGradient)
       },
       onMouseMoveGradient(event) {
         if (this.gradientType == 'linear') {
-          const dx = event.clientX - this.centalPoint.x
-          const dy = event.clientY - this.centalPoint.y
-
-          let angle = Math.round((Math.atan2(dx, -dy) * 180) / Math.PI)
-          if (angle < 0) {
-            angle += 360
-          }
-          this.degree = angle
+          this.degree = this.handleRoundCentral(
+            event.clientX,
+            event.clientY,
+            this.centalPoint.x,
+            this.centalPoint.y
+          )
         } else if (this.gradientType == 'radial') {
           const previewRect = this.$refs.gradientPreview.getBoundingClientRect()
           if (
@@ -133,6 +169,42 @@
           }
           if (previewRect.top >= event.clientY) {
             this.radialPointer.y = 0
+          }
+        } else if (this.gradientType == 'conic') {
+          if (this.conicPointer.key == 'conic-slider')
+            this.conicPointer.degree = this.handleRoundCentral(
+              event.clientX,
+              event.clientY,
+              this.conicPointer.central.x,
+              this.conicPointer.central.y
+            )
+          else if (this.conicPointer.key == 'conic-pointer') {
+            const previewRect =
+              this.$refs.gradientPreview.getBoundingClientRect()
+            if (
+              previewRect.top < event.clientY &&
+              event.clientY < previewRect.bottom
+            ) {
+              this.conicPointer.y = event.clientY - previewRect.top
+            }
+            if (
+              previewRect.left < event.clientX &&
+              event.clientX < previewRect.right
+            ) {
+              this.conicPointer.x = event.clientX - previewRect.left
+            }
+            if (previewRect.right <= event.clientX) {
+              this.conicPointer.x = previewRect.width
+            }
+            if (previewRect.left >= event.clientX) {
+              this.conicPointer.x = 0
+            }
+            if (previewRect.bottom <= event.clientY) {
+              this.conicPointer.y = previewRect.height
+            }
+            if (previewRect.top >= event.clientY) {
+              this.conicPointer.y = 0
+            }
           }
         }
       },
@@ -228,6 +300,13 @@
       },
       replaceAlpha(rgbaString, newAlpha) {
         return rgbaString.replace(/[^,]+(?=\))/, newAlpha)
+      },
+      handleRoundCentral(clientX, clientY, x, y) {
+        const dx = clientX - x
+        const dy = clientY - y
+        let angle = Math.round((Math.atan2(dx, -dy) * 180) / Math.PI)
+        if (angle < 0) angle += 360
+        return angle
       },
       handleChangeColor(color) {
         this.processColors[this.selectedColorIndex].color = color
@@ -363,6 +442,24 @@
             :style="{
               transform: `translateX(${radialPointer.x}px) translateY(${radialPointer.y}px)`,
             }"
+          ></div>
+        </div>
+        <div
+          class="color-gradient-preview-conic"
+          v-if="gradientType == 'conic'"
+          :style="{
+            transform: `translateX(${conicPointer.x}px) translateY(${conicPointer.y}px)`,
+          }"
+        >
+          <div
+            class="color-gradient-preview-conic-slider"
+            id="conic-slider"
+          ></div>
+          <div
+            class="color-gradient-preview-conic-pointer"
+            id="conic-pointer"
+            ref="conicPointer"
+            :style="{ transform: `rotate(${conicPointer.degree}deg)` }"
           ></div>
         </div>
       </div>
@@ -863,5 +960,85 @@
     background-color: var(--handle-color, #1f77ff);
     border-radius: 50%;
     box-sizing: border-box;
+  }
+  .color-gradient-preview-conic {
+    width: var(--angle-slider-diameter, 60px);
+    height: var(--angle-slider-diameter, 60px);
+    background-color: transparent;
+    position: absolute;
+    top: calc(var(--angle-slider-diameter, 60px) / -2);
+    left: calc(var(--angle-slider-diameter, 60px) / -2);
+    display: grid;
+    grid-template-areas: 'wrapper';
+    place-items: center;
+  }
+  .color-gradient-preview-conic-slider {
+    grid-area: wrapper;
+    box-sizing: border-box;
+    width: var(--angle-slider-diameter, 60px);
+    height: var(--angle-slider-diameter, 60px);
+    background-color: var(--angle-slider-bg-color, hsla(0, 0%, 100%, 0.2));
+    border: var(--angle-slider-border, 3px solid hsla(0, 0%, 100%, 0.5));
+    border-radius: 50%;
+    box-shadow: var(
+      --angle-slider-shadow,
+      0 0 3px rgba(0, 0, 0, 0.3),
+      inset 0 0 2px rgba(0, 0, 0, 0.1)
+    );
+    opacity: 0;
+    transition: opacity var(--animation-enter, 0.2s ease-in-out 0.05s);
+    cursor: grab;
+    z-index: 1;
+  }
+
+  .color-gradient-preview-conic-slider:hover,
+  .color-gradient-preview-conic-slider:hover + ::after {
+    opacity: 1;
+    transition: opacity var(--animation-exit, 0.15s ease-in-out 0.1s);
+  }
+  .color-gradient-preview-conic-pointer {
+    grid-area: wrapper;
+    box-sizing: border-box;
+    width: var(--hover-area-diameter, 36px);
+    height: var(--hover-area-diameter, 36px);
+    background-color: var(--position-slider-bg-color, #fff);
+    border-radius: 50%;
+    cursor: move;
+    z-index: 3;
+    background: radial-gradient(
+      var(--position-slider-bg-color, #fff) calc(50% / 1.41),
+      rgba(0, 0, 0, 0.1) calc(55% / 1.41),
+      transparent calc(65% / 1.41)
+    );
+  }
+  .color-gradient-preview-conic-pointer::before {
+    background-color: var(--knob-pointer-inner-color-hover, #116dff);
+    transition: background-color var(--animation-exit, 0.15s ease-in-out 0.1s);
+    position: absolute;
+    content: '';
+    border-radius: 50%;
+    left: calc(
+      50% - calc(var(--knob-pointer-inner-diameter, 4px) * 1.6) +
+        calc(var(--position-slider-diameter, 10px) / 2)
+    );
+    top: calc(50% - calc(var(--knob-pointer-inner-diameter, 12px) / 2));
+    width: var(--knob-pointer-inner-diameter, 4px);
+    height: var(--knob-pointer-inner-diameter, 4px);
+  }
+  .color-gradient-preview-conic-pointer::after {
+    left: calc(
+      50% + calc(var(--angle-slider-diameter, 60px) / 2) -
+        calc(var(--knob-pointer-outer-diameter, 50px) / 1.5)
+    );
+    top: calc(50% - calc(var(--knob-pointer-outer-diameter, 64px) / 2));
+    width: var(--knob-pointer-outer-diameter, 7px);
+    height: var(--knob-pointer-outer-diameter, 7px);
+    background-color: var(--knob-pointer-outer-color, #fff);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--animation-enter, 0.2s ease-in-out 0.05s);
+    position: absolute;
+    content: '';
+    border-radius: 50%;
   }
 </style>
