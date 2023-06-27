@@ -12,9 +12,14 @@
         default:
           'conic-gradient(from 152deg at 50% 50%, rgba(0, 87, 225, 1) 0%, rgba(249, 197, 180, 1) 68%, rgba(0, 87, 225, 1) 100%)',
       },
+      gradients: {
+        type: Array,
+        default: [],
+      },
     },
     mounted() {
       this.handleChangeValue(this.value)
+      this.gradientColors = this.gradients.concat(this.gradientColors)
     },
     data() {
       return {
@@ -340,6 +345,15 @@
           this.gradientType = 'conic'
         }
       },
+      handleAddTemplate() {
+        const existing = this.gradientColors.find(
+          (gradient) => gradient == this.gradientPreview
+        )
+        if (!existing)
+          this.gradientColors = [this.gradientPreview].concat(
+            this.gradientColors
+          )
+      },
       parseLinearGradient(gradientString) {
         const degree = gradientString.match(
           /-?\d+(\.\d+)?(deg|grad|rad|turn)/
@@ -584,7 +598,12 @@
       <div class="color-gradient-add">
         <div class="color-gradient-add-title">
           <div class="color-gradient-add-title-text">My color gradients</div>
-          <div class="color-gradient-add-title-add">+ Add</div>
+          <div
+            class="color-gradient-add-title-add"
+            @mousedown.prevent="handleAddTemplate"
+          >
+            + Add
+          </div>
         </div>
 
         <div class="color-gradient-add-preview">
@@ -914,6 +933,7 @@
   }
   .color-gradient-add-title-add {
     color: var(--primary, #116dff);
+    cursor: pointer;
   }
   .color-gradient-add-preview {
     grid-area: my-gradients;
