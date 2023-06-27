@@ -20,8 +20,13 @@
       const picker = this.$refs.picker.getBoundingClientRect()
       this.pickerLocation.top = picker.bottom + 2
       this.pickerLocation.left = picker.left
-      if (this.value.includes('gradient')) this.selected = 'gradient'
-      else this.selected = 'solid'
+      if (this.value.includes('gradient')) {
+        this.selected = 'gradient'
+        this.gradient = this.value
+      } else {
+        this.selected = 'solid'
+        this.solid = this.value
+      }
     },
     data() {
       return {
@@ -34,6 +39,8 @@
         startY: 0,
         startX: 0,
         selected: 'solid',
+        solid: '',
+        gradient: '',
       }
     },
     methods: {
@@ -46,12 +53,20 @@
         await this.$nextTick()
       },
       handleColorPickerChange(color, selection) {
+        console.log('object')
         this.$emit('update:value', color)
         this.$emit('change', color)
         if (selection) this.$emit('update:selection', selection)
       },
       handleSelectType(type) {
         this.selected = type
+        if (type == 'solid') {
+          this.gradient = this.value
+          this.$emit('update:value', this.solid)
+        } else if (type == 'gradient') {
+          this.solid = this.value
+          this.$emit('update:value', this.gradient)
+        }
       },
       onMouseDownLocation(event) {
         const headerRect = this.$refs.pickerHeader.getBoundingClientRect()
@@ -164,7 +179,7 @@
             />
           </div>
           <div v-if="selected == 'gradient'">
-            <ColorGradient :value="value" @change="handleColorPickerChange"/>
+            <ColorGradient :value="value" @change="handleColorPickerChange" />
           </div>
         </div>
       </div>

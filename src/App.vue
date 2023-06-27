@@ -52,10 +52,6 @@
     <div class="background-test" :style="{ background }"></div>
 
     <ColorPickerGradient v-model:value="background" />
-
-    <!-- <div class="wrapper">
-      <ColorGradient @change="handleChangeGradient" />
-    </div> -->
   </main>
 </template>
 

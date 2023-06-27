@@ -10,7 +10,7 @@
       value: {
         type: String,
         default:
-          'conic-gradient(from 152deg at 50% 50%, rgba(0, 87, 225, 1) 0%, rgba(249, 197, 180, 1) 68%, rgba(0, 87, 225, 1) 100%)',
+          'linear-gradient(90deg, rgba(145, 133, 122, 1) 0%, rgba(242, 222, 204, 1) 100%)',
       },
       gradients: {
         type: Array,
@@ -20,6 +20,12 @@
     mounted() {
       this.handleChangeValue(this.value)
       this.gradientColors = this.gradients.concat(this.gradientColors)
+      if (!this.value.includes('gradient')) {
+        this.$emit(
+          'change',
+          'linear-gradient(90deg, rgba(145, 133, 122, 1) 0%, rgba(242, 222, 204, 1) 100%)'
+        )
+      }
     },
     data() {
       return {

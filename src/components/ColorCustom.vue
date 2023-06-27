@@ -9,6 +9,9 @@
     },
     mounted() {
       this.previewColor = this.value
+      if (this.value.includes('gradient')) {
+        this.$emit('change', '#FFFFFF')
+      }
     },
     data() {
       return {
