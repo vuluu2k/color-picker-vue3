@@ -10,21 +10,11 @@
       value: {
         type: String,
         default:
-          'linear-gradient(90deg, rgba(145, 133, 122, 1) 0%, rgba(242, 222, 204, 1) 100%)',
+          'conic-gradient(from 152deg at 50% 50%, rgba(0, 87, 225, 1) 0%, rgba(249, 197, 180, 1) 68%, rgba(0, 87, 225, 1) 100%)',
       },
     },
     mounted() {
-      if (this.value.startsWith('linear-gradient')) {
-        const { degree, colors } = this.parseLinearGradient(this.value)
-        this.degree = degree
-        this.processColors = colors
-        // this.gradientType = 'linear'
-      } else if (this.value.startsWith('radial-gradient')) {
-        const { position, colors } = this.parseRadialGradient(this.value)
-        this.radialPointer = position
-        this.processColors = colors
-        this.gradientType = 'radial'
-      }
+      this.handleChangeValue(this.value)
     },
     data() {
       return {
@@ -209,13 +199,16 @@
         }
       },
       onMouseUpGradient(event) {
+        if (this.gradientType == 'conic') {
+          this.conicPointer.key = ''
+        }
         document.removeEventListener('mousemove', this.onMouseMoveGradient)
         document.removeEventListener('mouseup', this.onMouseUpGradient)
       },
       onMouseDownProcessColor(event) {
         const colorPickerCustom = this.$refs.colorPickerCustom
         if (event.target.id !== 'processPointer') {
-          colorPickerCustom.toggle(event)
+          colorPickerCustom.show = true
           const processRect = processColor.getBoundingClientRect()
           const processX = event.clientX - processRect.left
           const newColor = { color: colorPickerCustom.value, x: processX }
@@ -326,18 +319,25 @@
       handleDeleteColor() {
         if (this.processColors.length > 2) this.processColors.pop()
       },
-      handleSelectTemplate(gradientTemplate) {
-        if (gradientTemplate.startsWith('linear-gradient')) {
-          const { degree, colors } = this.parseLinearGradient(gradientTemplate)
+      handleChangeValue(valueChange) {
+        if (valueChange.startsWith('linear-gradient')) {
+          const { degree, colors } = this.parseLinearGradient(valueChange)
           this.degree = degree
           this.processColors = colors
           this.gradientType = 'linear'
-        } else if (gradientTemplate.startsWith('radial-gradient')) {
-          const { position, colors } =
-            this.parseRadialGradient(gradientTemplate)
+        } else if (valueChange.startsWith('radial-gradient')) {
+          const { position, colors } = this.parseRadialGradient(valueChange)
           this.radialPointer = position
           this.processColors = colors
           this.gradientType = 'radial'
+        } else if (valueChange.startsWith('conic-gradient')) {
+          const { degree, position, colors } =
+            this.parseConicGradient(valueChange)
+          this.conicPointer.degree = degree
+          this.conicPointer.x = position.x
+          this.conicPointer.y = position.y
+          this.processColors = colors
+          this.gradientType = 'conic'
         }
       },
       parseLinearGradient(gradientString) {
@@ -346,10 +346,10 @@
         )[0]
 
         const colors = gradientString
-          .match(/rgba\([\d\s,]+\)\s\d+(\.\d+)?%/g)
+          .match(/rgba?\([\d\s,]+\)\s\d+(\.\d+)?%/g)
           .map((colorString) => {
             const [color, percent] = colorString.match(
-              /rgba\([\d\s,]+\)|\d+(\.\d+)?%/g
+              /rgba?\([\d\s,]+\)|\d+(\.\d+)?%/g
             )
             return {
               color,
@@ -365,10 +365,10 @@
           .map((str) => str.split(' '))
 
         const colors = gradientString
-          .match(/rgba\([\d\s,]+\)\s\d+(\.\d+)?%/g)
+          .match(/rgba?\([\d\s,]+\)\s\d+(\.\d+)?%/g)
           .map((colorString) => {
             const [color, percent] = colorString.match(
-              /rgba\([\d\s,]+\)|\d+(\.\d+)?%/g
+              /rgba?\([\d\s,]+\)|\d+(\.\d+)?%/g
             )
             return {
               color,
@@ -381,6 +381,29 @@
             x: (parseFloat(position[2]) / 100) * 240,
             y: (parseFloat(position[3]) / 100) * 120,
           },
+          colors,
+        }
+      },
+      parseConicGradient(gradientString) {
+        const [[angle, _, x, y]] = gradientString
+          .match(/-?\d+(\.\d+)?deg at [\d.]+% [\d.]+%/)
+          .map((str) => str && str.split(' '))
+
+        const colors = gradientString
+          .match(/rgba?\([\d\s,]+\)\s\d+(\.\d+)?%/g)
+          .map((colorString) => {
+            const [color, percent] = colorString.match(
+              /rgba?\([\d\s,]+\)|\d+(\.\d+)?%/g
+            )
+            return {
+              color,
+              x: (parseFloat(percent) / 100) * 128,
+            }
+          })
+
+        return {
+          degree: parseFloat(angle),
+          position: { x: parseFloat(x), y: parseFloat(y) },
           colors,
         }
       },
@@ -453,6 +476,7 @@
         >
           <div
             class="color-gradient-preview-conic-slider"
+            :data-active="conicPointer.key == 'conic-slider'"
             id="conic-slider"
           ></div>
           <div
@@ -568,7 +592,7 @@
             class="color-gradient-add-preview-item"
             v-for="(gradient, index) in gradientColors"
             :key="index"
-            @mousedown.prevent="handleSelectTemplate(gradient)"
+            @mousedown.prevent="handleChangeValue(gradient)"
           >
             <div
               class="color-gradient-add-preview-item-inner"
@@ -990,11 +1014,15 @@
     cursor: grab;
     z-index: 1;
   }
-
+  .color-gradient-preview-conic-slider[data-active='true'],
+  .color-gradient-preview-conic-slider[data-active='true'] + ::after,
   .color-gradient-preview-conic-slider:hover,
   .color-gradient-preview-conic-slider:hover + ::after {
     opacity: 1;
     transition: opacity var(--animation-exit, 0.15s ease-in-out 0.1s);
+  }
+  .color-gradient-preview-conic-slider:active {
+    cursor: grabbing;
   }
   .color-gradient-preview-conic-pointer {
     grid-area: wrapper;
