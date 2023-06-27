@@ -1,17 +1,19 @@
 <script>
   import ColorPickerCustom from './components/ColorPickerCustom.vue'
   import ColorGradient from './components/ColorGradient.vue'
+  import ColorPickerGradient from './components/ColorPickerGradient.vue'
   export default {
     data() {
       return {
         color: '#1677ff',
         selection: null,
-        background: '#FFFFFF',
+        background: '#000000',
       }
     },
     components: {
       ColorPickerCustom,
       ColorGradient,
+      ColorPickerGradient,
     },
     methods: {
       handleChangeGradient(gradient) {
@@ -49,9 +51,11 @@
 
     <div class="background-test" :style="{ background }"></div>
 
-    <div class="wrapper">
+    <ColorPickerGradient v-model:value="background" />
+
+    <!-- <div class="wrapper">
       <ColorGradient @change="handleChangeGradient" />
-    </div>
+    </div> -->
   </main>
 </template>
 
