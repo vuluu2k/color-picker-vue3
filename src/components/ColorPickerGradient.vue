@@ -53,7 +53,6 @@
         await this.$nextTick()
       },
       handleColorPickerChange(color, selection) {
-        console.log('object')
         this.$emit('update:value', color)
         this.$emit('change', color)
         if (selection) this.$emit('update:selection', selection)
