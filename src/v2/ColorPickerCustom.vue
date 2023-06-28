@@ -58,7 +58,7 @@
           }
         }
       },
-      async setView(view) {
+      async setView(view, value) {
         this.view = view
         await this.$nextTick()
       },

@@ -1,7 +1,6 @@
 <script>
-  import { debounce } from 'lodash'
   export default {
-    emits: ['change', 'blur'],
+    emits: ['change', 'blur', 'setView'],
     props: {
       value: {
         type: String,
@@ -301,6 +300,12 @@
           this.handleRgb(this.rgb.red, this.rgb.green, this.rgb.blue)
         }
       },
+      handleCancel() {
+        this.$emit('setView', 'ColorCustom')
+      },
+      handleApply() {
+        this.$emit('setView', 'ColorCustom')
+      },
     },
     beforeUnmount() {
       document.removeEventListener('mousemove', this.onMouseMove)
@@ -561,8 +566,8 @@
       </div>
     </div>
     <div class="color-picker-buttons">
-      <button class="color-picker-cancel">Cancel</button>
-      <button class="color-picker-apply">Apply</button>
+      <button class="color-picker-cancel" @mousedown.prevent="handleCancel">Cancel</button>
+      <button class="color-picker-apply" @mousedown.prevent="handleApply">Apply</button>
     </div>
   </div>
 </template>
@@ -587,11 +592,13 @@
 
   .color-picker-cancel {
     border: 1px solid var(--divider, #e0e0e0);
+    cursor: pointer;
   }
 
   .color-picker-apply {
     color: white;
     background-color: var(--primary, #1677ff);
+    cursor: pointer;
   }
 
   input {
