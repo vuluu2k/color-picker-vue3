@@ -1,6 +1,12 @@
 <script>
+  import { useSiteStore } from '@/stores/site'
+
   export default {
     emits: ['change', 'blur', 'setView'],
+    setup() {
+      const siteStore = useSiteStore()
+      return { siteStore }
+    },
     props: {
       value: {
         type: String,
@@ -304,6 +310,14 @@
         this.$emit('setView', 'ColorCustom')
       },
       handleApply() {
+        this.siteStore.updateSite(this.$route.params.site_id, {
+          settings: {
+            ...this.siteStore.getSettings,
+            colors: [this.value].concat(
+              this.siteStore.getSettings?.colors || []
+            ),
+          },
+        })
         this.$emit('setView', 'ColorCustom')
       },
     },
@@ -566,8 +580,12 @@
       </div>
     </div>
     <div class="color-picker-buttons">
-      <button class="color-picker-cancel" @mousedown.prevent="handleCancel">Cancel</button>
-      <button class="color-picker-apply" @mousedown.prevent="handleApply">Apply</button>
+      <button class="color-picker-cancel" @mousedown.prevent="handleCancel">
+        Cancel
+      </button>
+      <button class="color-picker-apply" @mousedown.prevent="handleApply">
+        Apply
+      </button>
     </div>
   </div>
 </template>

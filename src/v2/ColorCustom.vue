@@ -1,6 +1,12 @@
 <script>
+  import { useSiteStore } from '@/stores/site'
+
   export default {
-    emits: ['change'],
+    emits: ['change', 'setView'],
+    setup() {
+      const siteStore = useSiteStore()
+      return { siteStore }
+    },
     props: {
       value: {
         type: String,
@@ -22,7 +28,7 @@
           ['#d1dbc3', '#abb899', '#7f9463', '#556342', '#2a3121'],
           ['#c7d3d5', '#9aa9ac', '#677e82', '#45575a', '#222a2b'],
         ],
-        colors: [
+        colorsDefault: [
           '#000000',
           '#ffffff',
           '#8b0000',
@@ -40,6 +46,13 @@
         ],
         previewColor: '#000000',
       }
+    },
+    computed: {
+      colors() {
+        return (this.siteStore.getSettings?.colors || []).concat(
+          this.colorsDefault
+        )
+      },
     },
     methods: {
       onMouseOverColor(event) {

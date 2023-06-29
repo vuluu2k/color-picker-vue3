@@ -1,4 +1,5 @@
 <script>
+  import { useSiteStore } from '@/stores/site'
   import ColorPickerCustom from './ColorPickerCustom.vue'
 
   export default {
@@ -6,20 +7,19 @@
     components: {
       ColorPickerCustom,
     },
+    setup() {
+      const siteStore = useSiteStore()
+      return { siteStore }
+    },
     props: {
       value: {
         type: String,
         default:
           'linear-gradient(90deg, rgba(145, 133, 122, 1) 0%, rgba(242, 222, 204, 1) 100%)',
       },
-      gradients: {
-        type: Array,
-        default: [],
-      },
     },
     mounted() {
       this.handleChangeValue(this.value)
-      this.gradientColors = this.gradients.concat(this.gradientColors)
       if (!this.value.includes('gradient')) {
         this.$emit(
           'change',
@@ -35,7 +35,7 @@
           y: 0,
         },
         gradientType: 'linear',
-        gradientColors: [
+        gradientColorsDefault: [
           'linear-gradient(90deg, rgba(145, 133, 122, 1) 0%, rgba(242, 222, 204, 1) 100%)',
           'linear-gradient(50.4988deg, rgba(127, 148, 99, 1) 17.0105%, rgba(242, 222, 204, 1) 48.2697%, rgba(56, 74, 211, 1) 80.9021%)',
           'radial-gradient(circle at 50% 50%, rgba(56, 74, 211, 1) 15.0635%, rgba(232, 234, 237, 1) 80.2887%)',
@@ -65,6 +65,11 @@
       }
     },
     computed: {
+      gradientColors() {
+        return (this.siteStore.getSettings?.gradients || []).concat(
+          this.gradientColorsDefault
+        )
+      },
       colorsPreview() {
         const colors = this.processColors.map((process) => {
           const processPercent = Math.round((process.x / 128) * 100)
@@ -219,6 +224,10 @@
       onMouseDownProcessColor(event) {
         const colorPickerCustom = this.$refs.colorPickerCustom
         if (event.target.id !== 'processPointer') {
+          if(colorPickerCustom.show == false){
+            colorPickerCustom.pickerLocation.left = event.clientX - 60
+            colorPickerCustom.pickerLocation.top = event.clientY + 20
+          }
           colorPickerCustom.show = true
           const processRect = processColor.getBoundingClientRect()
           const processX = event.clientX - processRect.left
@@ -356,9 +365,14 @@
           (gradient) => gradient == this.gradientPreview
         )
         if (!existing)
-          this.gradientColors = [this.gradientPreview].concat(
-            this.gradientColors
-          )
+          this.siteStore.updateSite(this.$route.params.site_id, {
+            settings: {
+              ...this.siteStore.getSettings,
+              gradients: [this.gradientPreview].concat(
+                this.siteStore.getSettings?.gradients || []
+              ),
+            },
+          })
       },
       parseLinearGradient(gradientString) {
         const degree = gradientString.match(
@@ -449,8 +463,7 @@
     <div class="color-gradient-select">
       <select
         v-model="gradientType"
-        style="width: 196px; margin: 0 22px; padding: 0 12px"
-      >
+        style="width: 196px; margin: 0 22px; padding: 0 12px">
         <option value="linear">Linear</option>
         <option value="radial">Radial</option>
         <option value="conic">Conic</option>
@@ -463,48 +476,40 @@
         @mousedown.stop.prevent="onMouseDownGradient"
         :style="{
           'background-image': gradientPreview,
-        }"
-      >
+        }">
         <div
           class="color-gradient-preview-action"
-          v-if="gradientType == 'linear'"
-        >
+          v-if="gradientType == 'linear'">
           <div class="color-gradient-preview-overlay"></div>
           <div
             class="color-gradient-preview-slider"
-            :style="{ transform: `rotate(${degree}deg)` }"
-          ></div>
+            :style="{ transform: `rotate(${degree}deg)` }"></div>
           <div class="color-gradient-preview-degree">{{ degree }}</div>
         </div>
         <div
           class="color-gradient-preview-radial"
-          v-if="gradientType == 'radial'"
-        >
+          v-if="gradientType == 'radial'">
           <div
             class="color-gradient-preview-radial-pointer"
             :style="{
               transform: `translateX(${radialPointer.x}px) translateY(${radialPointer.y}px)`,
-            }"
-          ></div>
+            }"></div>
         </div>
         <div
           class="color-gradient-preview-conic"
           v-if="gradientType == 'conic'"
           :style="{
             transform: `translateX(${conicPointer.x}px) translateY(${conicPointer.y}px)`,
-          }"
-        >
+          }">
           <div
             class="color-gradient-preview-conic-slider"
             :data-active="conicPointer.key == 'conic-slider'"
-            id="conic-slider"
-          ></div>
+            id="conic-slider"></div>
           <div
             class="color-gradient-preview-conic-pointer"
             id="conic-pointer"
             ref="conicPointer"
-            :style="{ transform: `rotate(${conicPointer.degree}deg)` }"
-          ></div>
+            :style="{ transform: `rotate(${conicPointer.degree}deg)` }"></div>
         </div>
       </div>
 
@@ -514,14 +519,12 @@
             class="color-gradient-processing"
             :style="{
               'background-image': `linear-gradient(90deg, ${this.colorsPreview})`,
-            }"
-          >
+            }">
             <div
               class="color-gradient-processing-overlay"
               @mousedown.prevent="onMouseDownProcessColor"
               ref="processColor"
-              id="processColor"
-            >
+              id="processColor">
               <div
                 class="color-gradient-processing-node"
                 v-for="(processColor, index) in processColors"
@@ -533,35 +536,29 @@
                 :data-selected="selectedColorIndex == index"
                 :key="index"
                 @mousedown.prevent="selectedColorIndex = index"
-                id="processPointer"
-              />
+                id="processPointer" />
             </div>
           </div>
           <div
             class="color-gradient-flip-color"
-            @mousedown.prevent="handleFlipColor"
-          >
+            @mousedown.prevent="handleFlipColor">
             <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
               <path
-                d="M7.70710678,8 L9.85355339,10.1464466 C10.0488155,10.3417088 10.0488155,10.6582912 9.85355339,10.8535534 C9.65829124,11.0488155 9.34170876,11.0488155 9.14644661,10.8535534 L5.79289322,7.5 L9.14644661,4.14644661 C9.34170876,3.95118446 9.65829124,3.95118446 9.85355339,4.14644661 C10.0488155,4.34170876 10.0488155,4.65829124 9.85355339,4.85355339 L7.70710678,7 L12,7 C15.3137085,7 18,9.6862915 18,13 L17,13 C17,10.2385763 14.7614237,8 12,8 L7.70710678,8 Z M16.2928932,16 L14.1464466,13.8535534 C13.9511845,13.6582912 13.9511845,13.3417088 14.1464466,13.1464466 C14.3417088,12.9511845 14.6582912,12.9511845 14.8535534,13.1464466 L18.2071068,16.5 L14.8535534,19.8535534 C14.6582912,20.0488155 14.3417088,20.0488155 14.1464466,19.8535534 C13.9511845,19.6582912 13.9511845,19.3417088 14.1464466,19.1464466 L16.2928932,17 L12,17 C8.6862915,17 6,14.3137085 6,11 L7,11 C7,13.7614237 9.23857625,16 12,16 L16.2928932,16 Z"
-              ></path>
+                d="M7.70710678,8 L9.85355339,10.1464466 C10.0488155,10.3417088 10.0488155,10.6582912 9.85355339,10.8535534 C9.65829124,11.0488155 9.34170876,11.0488155 9.14644661,10.8535534 L5.79289322,7.5 L9.14644661,4.14644661 C9.34170876,3.95118446 9.65829124,3.95118446 9.85355339,4.14644661 C10.0488155,4.34170876 10.0488155,4.65829124 9.85355339,4.85355339 L7.70710678,7 L12,7 C15.3137085,7 18,9.6862915 18,13 L17,13 C17,10.2385763 14.7614237,8 12,8 L7.70710678,8 Z M16.2928932,16 L14.1464466,13.8535534 C13.9511845,13.6582912 13.9511845,13.3417088 14.1464466,13.1464466 C14.3417088,12.9511845 14.6582912,12.9511845 14.8535534,13.1464466 L18.2071068,16.5 L14.8535534,19.8535534 C14.6582912,20.0488155 14.3417088,20.0488155 14.1464466,19.8535534 C13.9511845,19.6582912 13.9511845,19.3417088 14.1464466,19.1464466 L16.2928932,17 L12,17 C8.6862915,17 6,14.3137085 6,11 L7,11 C7,13.7614237 9.23857625,16 12,16 L16.2928932,16 Z"></path>
             </svg>
           </div>
           <div
             class="color-gradient-delete-color"
-            @mousedown.prevent="handleDeleteColor"
-          >
+            @mousedown.prevent="handleDeleteColor">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
               height="24"
-              viewBox="0 0 24 24"
-            >
+              viewBox="0 0 24 24">
               <g>
                 <path
                   fill="#000000"
-                  d="M16 16c0 1.104-.896 2-2 2h-4c-1.104 0-2-.896-2-2V8h8v8zm-6-9.5c0-.271.24-.5.525-.5h2.867c.301 0 .608.252.608.5V7h-4v-.5zm5 .5v-.5c0-.799-.752-1.5-1.608-1.5h-2.867C9.684 5 9 5.673 9 6.5V7H6v1h1v8c0 1.657 1.343 3 3 3h4c1.657 0 3-1.343 3-3V8h1V7h-3zm-2 9h1v-6h-1v6zm-3 0h1v-6h-1v6z"
-                ></path>
+                  d="M16 16c0 1.104-.896 2-2 2h-4c-1.104 0-2-.896-2-2V8h8v8zm-6-9.5c0-.271.24-.5.525-.5h2.867c.301 0 .608.252.608.5V7h-4v-.5zm5 .5v-.5c0-.799-.752-1.5-1.608-1.5h-2.867C9.684 5 9 5.673 9 6.5V7H6v1h1v8c0 1.657 1.343 3 3 3h4c1.657 0 3-1.343 3-3V8h1V7h-3zm-2 9h1v-6h-1v6zm-3 0h1v-6h-1v6z"></path>
               </g>
             </svg>
           </div>
@@ -570,8 +567,7 @@
 
       <div
         class="color-gradient-custom"
-        :style="{ '--color': processColors[selectedColorIndex].color }"
-      >
+        :style="{ '--color': processColors[selectedColorIndex].color }">
         <div
           ref="opacityColor"
           class="color-gradient-opacity"
@@ -579,8 +575,7 @@
             '--range-input-value': alpha / 100,
             '--range-input-width': '80px',
           }"
-          @mousedown.prevent="onMouseDownOpacity"
-        >
+          @mousedown.prevent="onMouseDownOpacity">
           <span class="color-gradient-opacity-range"></span>
         </div>
         <div class="color-gradient-opacity-input">
@@ -590,15 +585,14 @@
             max="100"
             step="1"
             v-model="alpha"
-            @input="handleChangeAlpha"
-          />
+            @input="handleChangeAlpha" />
           <span>%</span>
         </div>
         <ColorPickerCustom
           :value="processColors[selectedColorIndex].color"
           @change="handleChangeColor"
-          ref="colorPickerCustom"
-        />
+          output="rgb"
+          ref="colorPickerCustom" />
       </div>
 
       <div class="color-gradient-add">
@@ -606,8 +600,7 @@
           <div class="color-gradient-add-title-text">My color gradients</div>
           <div
             class="color-gradient-add-title-add"
-            @mousedown.prevent="handleAddTemplate"
-          >
+            @mousedown.prevent="handleAddTemplate">
             + Add
           </div>
         </div>
@@ -617,12 +610,10 @@
             class="color-gradient-add-preview-item"
             v-for="(gradient, index) in gradientColors"
             :key="index"
-            @mousedown.prevent="handleChangeValue(gradient)"
-          >
+            @mousedown.prevent="handleChangeValue(gradient)">
             <div
               class="color-gradient-add-preview-item-inner"
-              :style="{ 'background-image': gradient }"
-            ></div>
+              :style="{ 'background-image': gradient }"></div>
           </div>
         </div>
       </div>

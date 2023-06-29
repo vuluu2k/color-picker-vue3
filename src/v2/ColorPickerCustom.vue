@@ -5,6 +5,7 @@
 
   export default {
     emits: ['update:value', 'change'],
+
     components: {
       ColorCustom,
       ColorPicker,
@@ -22,6 +23,10 @@
       placement: {
         type: String,
         default: 'bottomRight',
+      },
+      output: {
+        type: String,
+        default: 'hex',
       },
     },
     mounted() {
@@ -63,8 +68,13 @@
         await this.$nextTick()
       },
       handleColorChange(color, selection) {
-        this.$emit('update:value', color)
-        this.$emit('change', color, selection)
+        let colorValue = color
+        if (this.output == 'rgb') {
+          const [r, g, b, a] = this.hexToRgb(colorValue)
+          colorValue = `rgba(${r},${g},${b},${a / 255})`
+        }
+        this.$emit('update:value', colorValue)
+        this.$emit('change', colorValue, selection)
       },
       onMouseDownLocation(event) {
         const headerRect = this.$refs.pickerHeader.getBoundingClientRect()
